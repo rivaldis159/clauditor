@@ -1,5 +1,10 @@
 # Clauditor
 
+[![Latest release](https://img.shields.io/github/v/release/rivaldis159/clauditor?label=release&color=f0773f)](https://github.com/rivaldis159/clauditor/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/rivaldis159/clauditor/total?color=f0773f)](https://github.com/rivaldis159/clauditor/releases)
+[![License: MIT](https://img.shields.io/github/license/rivaldis159/clauditor?color=f0773f)](LICENSE)
+![Windows 10 | 11](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-4c4a46)
+
 **A code editor built for Claude Code** — a VS Code–style desktop editor for watching and steering how
 Claude builds your project, connected directly to Claude desktop. English by default; Indonesian is
 available in Settings → Appearance → Language.
@@ -7,7 +12,13 @@ available in Settings → Appearance → Language.
 > **Unofficial.** Clauditor is an independent community project. It is not affiliated with, endorsed by,
 > or sponsored by Anthropic. Claude, Claude Code and Claude desktop are trademarks of Anthropic, PBC.
 
-![Clauditor following a Claude desktop session](docs/screenshot.png)
+<picture>
+  <source media="(prefers-reduced-motion: reduce)" srcset="docs/screenshot.png">
+  <img src="docs/demo.gif" alt="Claude desktop adds a feature to a small project while Clauditor follows live: each file Claude edits opens by itself, the changes are typed in and highlighted, and every step lands on the session timeline">
+</picture>
+
+*Claude desktop works on a project; Clauditor follows along — files open by themselves, edits are typed
+in, and every step lands on the timeline.*
 
 ## What it does
 
@@ -119,6 +130,7 @@ npm run e2e        # end-to-end tests (Playwright + Electron); TOUR=1 [TOUR_LANG
 npm run typecheck  # TypeScript 7
 npm run i18n       # every UI string has an Indonesian translation, no hard-coded text
 npm run icons      # rebuild build/icon.ico, build/icon.png, resources/icon.png from build/icon.svg
+npm run demo       # record docs/demo.gif and docs/social-preview.png from a scripted session
 npm run dist       # dist/win-unpacked (electron-builder) + dist/Clauditor-Setup-<version>.exe (Inno Setup)
 ```
 

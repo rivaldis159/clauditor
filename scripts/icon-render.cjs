@@ -1,4 +1,5 @@
-// Electron helper for scripts/make-icons.mjs: renders one HTML page offscreen and writes PNG crops.
+// Electron helper for scripts/make-icons.mjs and scripts/demo/social-preview.mjs: renders one HTML
+// page offscreen and writes PNG crops.
 // usage: electron scripts/icon-render.cjs <job.json>
 //   job.json: { "html": "<abs .html>", "width": 800, "height": 600,
 //               "crops": [{ "x": 0, "y": 0, "width": 256, "height": 256, "out": "<abs .png>" }] }
@@ -21,6 +22,7 @@ app.whenReady().then(async () => {
     webPreferences: { offscreen: true }
   })
   await win.loadFile(job.html)
+  await win.webContents.executeJavaScript('document.fonts.ready.then(() => true)')
   await new Promise((r) => setTimeout(r, 300))
   const page = await win.webContents.capturePage()
   const { width, height } = page.getSize()
