@@ -1,0 +1,565 @@
+.editor-area {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  background: var(--bg-2);
+}
+.editor-group-slot {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+.editor-group {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+.editor-group-slot + .sash + .editor-group-slot {
+  border-left: 1px solid var(--line-soft);
+}
+.editor-content {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------------ tabs */
+.tabbar {
+  display: flex;
+  align-items: stretch;
+  height: var(--tab-h);
+  flex: none;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--line-soft);
+}
+.tabs {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar {
+  height: 0;
+}
+.tabs.overflow::-webkit-scrollbar {
+  height: 3px;
+}
+.tabbar:hover .tabs.overflow::-webkit-scrollbar-thumb {
+  background: var(--scrollbar);
+  border: 0;
+}
+.tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  max-width: 260px;
+  height: 100%;
+  padding: 0 6px 0 12px;
+  border-right: 1px solid var(--line-soft);
+  color: var(--fg-2);
+  font-size: var(--fs-md);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tab:hover {
+  background: var(--bg-3);
+  color: var(--fg-1);
+}
+.tab.active {
+  background: var(--bg-2);
+  color: var(--fg-0);
+}
+.tab.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: var(--bg-2);
+}
+.tabbar.group-active .tab.active::before,
+.editor-area > .editor-group-slot:only-child .tab.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: var(--accent);
+}
+.tab.preview .tab-label {
+  font-style: italic;
+}
+.tab-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tab-label.deleted {
+  text-decoration: line-through;
+  color: var(--bad);
+}
+.tab-label.conflict {
+  color: var(--warn);
+}
+.tab-hint {
+  flex: none;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--fg-3);
+  font-size: var(--fs-sm);
+}
+.tab-kind-icon {
+  flex: none;
+  color: var(--fg-2);
+}
+.tab-kind-icon.claude {
+  color: var(--accent);
+}
+.tab-kind-icon.diff {
+  color: var(--info);
+}
+/* symmetric 20×20 close target; the X and the dirty dot share the same centre */
+.tab-close {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg-2);
+  flex: none;
+}
+.tab-close:hover {
+  background: var(--bg-5);
+  color: var(--fg-0);
+}
+.tab-close > * {
+  grid-area: 1 / 1;
+}
+.tab-x {
+  display: block;
+  opacity: 0;
+}
+.tab:hover .tab-x,
+.tab.active .tab-x {
+  opacity: 1;
+}
+.tab-dirty-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--fg-1);
+  opacity: 0;
+}
+.tab.dirty .tab-dirty-dot {
+  opacity: 1;
+}
+.tab.dirty .tab-x {
+  opacity: 0;
+}
+.tab.dirty .tab-close:hover .tab-x {
+  opacity: 1;
+}
+.tab.dirty .tab-close:hover .tab-dirty-dot {
+  opacity: 0;
+}
+.tab-ember {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-right: -2px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: ember 1.4s ease-in-out infinite;
+}
+.tab.claude-working .tab-label {
+  color: var(--accent);
+}
+.tab-touched {
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 1.5px;
+  transform: rotate(45deg);
+  background: var(--accent);
+  opacity: 0.8;
+}
+.tab.drop-before {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.tabbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+  padding: 0 6px;
+}
+
+/* ------------------------------------------------------------------ breadcrumbs */
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  flex: none;
+  padding: 0 12px;
+  overflow: hidden;
+  background: var(--bg-2);
+  color: var(--fg-2);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+.crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+.crumb.last {
+  flex: 0 0 auto;
+  max-width: 60%;
+}
+.crumb-btn {
+  height: 20px;
+  padding: 0 3px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+}
+.crumb-btn:hover {
+  background: var(--bg-3);
+  color: var(--fg-0);
+}
+.crumb.last .crumb-btn {
+  color: var(--fg-1);
+}
+.crumb-sep {
+  flex: none;
+  color: var(--fg-3);
+  margin: 0 1px;
+}
+
+/* ------------------------------------------------------------------ code host */
+.code-host,
+.diff-host {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.monaco-host {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+.editor-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 5px 10px 5px 12px;
+  flex: none;
+  font-size: var(--fs-sm);
+  border-bottom: 1px solid var(--line);
+}
+.editor-banner.warn {
+  background: var(--warn-soft);
+  color: var(--fg-0);
+}
+.editor-banner.warn > svg {
+  color: var(--warn);
+  flex: none;
+}
+.editor-banner.bad {
+  background: var(--bad-soft);
+}
+.editor-banner.bad > svg {
+  color: var(--bad);
+  flex: none;
+}
+.editor-notice {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--fg-2);
+}
+.editor-notice strong {
+  color: var(--fg-1);
+  font-weight: 500;
+}
+.notice-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Monaco draws its minimap canvas at 90% opacity, which lets long lines show through. */
+.monaco-editor .minimap canvas {
+  opacity: 1 !important;
+}
+
+/* Claude decorations inside Monaco */
+.monaco-editor .claude-line-flash {
+  animation: claude-flash 2.4s var(--ease) forwards;
+}
+@keyframes claude-flash {
+  0% {
+    background: color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  35% {
+    background: color-mix(in srgb, var(--ok) 16%, transparent);
+  }
+  100% {
+    background: transparent;
+  }
+}
+.monaco-editor .claude-gutter {
+  margin-left: 3px;
+  width: 3px !important;
+  border-radius: 1px;
+  background: var(--accent);
+}
+.monaco-editor .claude-gutter-removed {
+  margin-left: 2px;
+  width: 0 !important;
+  height: 0 !important;
+  border-left: 5px solid var(--bad);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transform: translateY(70%);
+}
+.monaco-editor .git-gutter-added,
+.monaco-editor .git-gutter-modified {
+  margin-left: 8px;
+  width: 3px !important;
+}
+.monaco-editor .git-gutter-added {
+  background: var(--git-added);
+}
+.monaco-editor .git-gutter-modified {
+  background: repeating-linear-gradient(to bottom, var(--git-modified) 0 2px, transparent 2px 3px);
+}
+.monaco-editor .git-gutter-deleted {
+  margin-left: 7px;
+  width: 0 !important;
+  border-left: 4px solid var(--git-deleted);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transform: translateY(75%);
+}
+.monaco-editor .reveal-flash {
+  animation: reveal-flash 1.5s var(--ease) forwards;
+}
+@keyframes reveal-flash {
+  0% {
+    background: var(--accent-soft);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+.claude-cursor {
+  position: relative;
+  pointer-events: none;
+  transition: opacity 600ms var(--ease);
+}
+.claude-cursor.fading {
+  opacity: 0;
+}
+.claude-caret {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 2px;
+  height: 1.35em;
+  border-radius: 1px;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow);
+  animation: caret-blink 1s steps(1) infinite;
+}
+@keyframes caret-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+.claude-tag {
+  position: absolute;
+  left: 0;
+  top: -16px;
+  padding: 1px 5px;
+  border-radius: 3px 3px 3px 0;
+  background: var(--accent);
+  color: var(--fg-on-accent);
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ diff */
+.diff-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  flex: none;
+  padding: 0 8px 0 14px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg-1);
+  font-size: var(--fs-sm);
+  color: var(--fg-2);
+}
+.diff-side {
+  max-width: 30%;
+  color: var(--fg-1);
+  font-weight: 500;
+}
+.diff-arrow {
+  color: var(--fg-3);
+}
+.diff-stats {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.plus {
+  color: var(--ok);
+}
+.minus {
+  color: var(--bad);
+}
+/* centre the inline +/− signs in their (wider) decoration column instead of hugging the numbers */
+.monaco-diff-editor .insert-sign,
+.monaco-diff-editor .delete-sign {
+  justify-content: center;
+}
+.ide-proposal {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px 10px 14px;
+  flex: none;
+  background: linear-gradient(90deg, var(--accent-soft), var(--accent-softer) 60%, transparent);
+  border-bottom: 1px solid var(--accent-line);
+}
+.ide-proposal > svg {
+  flex: none;
+  color: var(--accent);
+}
+.ide-proposal-title {
+  color: var(--fg-0);
+  font-weight: 600;
+}
+.ide-proposal-sub {
+  color: var(--fg-2);
+  font-size: var(--fs-sm);
+}
+
+/* ------------------------------------------------------------------ image */
+.image-preview {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+.image-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: 24px;
+  background-color: var(--bg-2);
+  background-image:
+    linear-gradient(45deg, var(--bg-3) 25%, transparent 25%), linear-gradient(-45deg, var(--bg-3) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--bg-3) 75%), linear-gradient(-45deg, transparent 75%, var(--bg-3) 75%);
+  background-size: 18px 18px;
+  background-position:
+    0 0,
+    0 9px,
+    9px -9px,
+    -9px 0;
+}
+.image-stage img {
+  image-rendering: auto;
+  box-shadow: var(--shadow-md);
+}
+.image-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 8px 0 14px;
+  border-top: 1px solid var(--line-soft);
+  background: var(--bg-1);
+  font-size: var(--fs-sm);
+}
+
+/* ------------------------------------------------------------------ empty editor */
+.empty-editor {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+}
+.empty-editor-mark {
+  opacity: 0.16;
+  filter: grayscale(0.4);
+}
+[data-theme='light'] .empty-editor-mark {
+  opacity: 0.22;
+}
+.empty-editor-hints {
+  display: grid;
+  gap: 2px;
+  min-width: 300px;
+}
+.hint-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg-2);
+  font-size: var(--fs-md);
+}
+.hint-row:hover {
+  background: var(--bg-3);
+  color: var(--fg-0);
+}
+.hint-keys {
+  display: flex;
+  gap: 3px;
+}

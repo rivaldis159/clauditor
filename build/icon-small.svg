@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- Clauditor, small sizes (16-32 px): a spark between code brackets on a dark editor tile -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#34322E"/>
+      <stop offset="1" stop-color="#1E1D1B"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="248" height="248" rx="52" fill="url(#tile)"/>
+  <g fill="none" stroke="#F0EEE6" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M62 86 L34 128 L62 170"/>
+    <path d="M194 86 L222 128 L194 170"/>
+  </g>
+  <path d="M128 128L128.00 76.00M128 128L152.04 103.96M128 128L180.00 128.00M128 128L152.04 152.04M128 128L128.00 180.00M128 128L103.96 152.04M128 128L76.00 128.00M128 128L103.96 103.96" fill="none" stroke="#F0773F" stroke-width="19" stroke-linecap="round"/>
+</svg>

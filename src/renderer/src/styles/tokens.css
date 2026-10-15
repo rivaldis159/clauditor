@@ -1,0 +1,247 @@
+/* Clauditor design tokens — "The Forge": warm graphite surfaces, molten ember accent. */
+
+:root {
+  /* Claude's own fonts, loaded at runtime from the Claude desktop install (lib/claudeFonts.ts);
+     the open fonts after them are bundled fallbacks */
+  --font-ui: 'Anthropic Sans', 'IBM Plex Sans', 'Segoe UI Variable Text', 'Segoe UI', sans-serif;
+  --font-mono: 'Anthropic Mono', 'JetBrains Mono Variable', 'Cascadia Mono', Consolas, monospace;
+  --font-display: 'Anthropic Serif', 'Instrument Serif', Georgia, serif;
+
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-lg: 14px;
+  --fs-xl: 16px;
+
+  --titlebar-h: 38px;
+  --activity-w: 48px;
+  --statusbar-h: 24px;
+  --tab-h: 36px;
+  --row-h: 24px;
+  --panel-head-h: 36px;
+
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 90ms;
+  --dur: 160ms;
+}
+
+/* ------------------------------ dark (default) ------------------------------ */
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg-0: #121214;
+  --bg-1: #17171a;
+  --bg-2: #1b1b1f;
+  --bg-3: #222227;
+  --bg-4: #2a2a30;
+  --bg-5: #33333a;
+  --bg-overlay: rgba(9, 9, 11, 0.62);
+  --line: #26262c;
+  --line-soft: #1f1f24;
+  --line-strong: #36363e;
+
+  --fg-0: #ededf0;
+  --fg-1: #bdbdc5;
+  --fg-2: #8b8b95;
+  --fg-3: #60606a;
+  --fg-on-accent: #1a0d05;
+
+  --accent: #ff7a3d;
+  --accent-hover: #ff8f59;
+  --accent-press: #f06a2c;
+  --accent-soft: rgba(255, 122, 61, 0.13);
+  --accent-softer: rgba(255, 122, 61, 0.07);
+  --accent-line: rgba(255, 122, 61, 0.42);
+  --accent-glow: rgba(255, 122, 61, 0.38);
+
+  --ok: #5fcf8a;
+  --ok-soft: rgba(95, 207, 138, 0.13);
+  --bad: #f2616d;
+  --bad-soft: rgba(242, 97, 109, 0.13);
+  --warn: #f1b24a;
+  --warn-soft: rgba(241, 178, 74, 0.13);
+  --info: #6aa9ff;
+  --info-soft: rgba(106, 169, 255, 0.13);
+  --violet: #b394ff;
+  --violet-soft: rgba(179, 148, 255, 0.13);
+  --teal: #4fd1c5;
+
+  --git-modified: #e2b553;
+  --git-added: #5fcf8a;
+  --git-deleted: #f2616d;
+  --git-untracked: #6fd09a;
+  --git-conflict: #ff6b9a;
+  --git-renamed: #6aa9ff;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.45);
+  --focus-ring: 0 0 0 1px var(--accent), 0 0 0 4px var(--accent-softer);
+  --scrollbar: rgba(255, 255, 255, 0.11);
+  --scrollbar-hover: rgba(255, 255, 255, 0.2);
+  --selection: rgba(255, 122, 61, 0.24);
+  --noise-opacity: 0.035;
+
+  /* tool-category palette (validated order: edit, read, search, shell, agent — CVD ΔE ≥ 16) */
+  --cat-edit: #d95926;
+  --cat-read: #3987e5;
+  --cat-search: #199e70;
+  --cat-shell: #9085e9;
+  --cat-agent: #d55181;
+  --cat-other: #6c6c76;
+  --chart-grid: #2a2a30;
+  --chart-axis: #3a3a42;
+}
+
+/* ---------------------------------- light ---------------------------------- */
+[data-theme='light'] {
+  color-scheme: light;
+  --bg-0: #efeff2;
+  --bg-1: #f6f6f8;
+  --bg-2: #ffffff;
+  --bg-3: #ececf0;
+  --bg-4: #e3e3e9;
+  --bg-5: #d9d9e0;
+  --bg-overlay: rgba(30, 30, 38, 0.28);
+  --line: #e2e2e8;
+  --line-soft: #ececf1;
+  --line-strong: #d1d1d9;
+
+  --fg-0: #19191e;
+  --fg-1: #45454f;
+  --fg-2: #6b6b77;
+  --fg-3: #9b9ba6;
+  --fg-on-accent: #ffffff;
+
+  --accent: #e0561a;
+  --accent-hover: #ec6427;
+  --accent-press: #c94a12;
+  --accent-soft: rgba(224, 86, 26, 0.11);
+  --accent-softer: rgba(224, 86, 26, 0.06);
+  --accent-line: rgba(224, 86, 26, 0.4);
+  --accent-glow: rgba(224, 86, 26, 0.28);
+
+  --ok: #1e9a55;
+  --ok-soft: rgba(30, 154, 85, 0.1);
+  --bad: #d23848;
+  --bad-soft: rgba(210, 56, 72, 0.09);
+  --warn: #b5780b;
+  --warn-soft: rgba(181, 120, 11, 0.1);
+  --info: #2c6ddb;
+  --info-soft: rgba(44, 109, 219, 0.09);
+  --violet: #7650d6;
+  --violet-soft: rgba(118, 80, 214, 0.09);
+  --teal: #12968a;
+
+  --git-modified: #a77a0e;
+  --git-added: #1e9a55;
+  --git-deleted: #d23848;
+  --git-untracked: #22924f;
+  --git-conflict: #d1356e;
+  --git-renamed: #2c6ddb;
+
+  --shadow-sm: 0 1px 2px rgba(20, 20, 30, 0.08);
+  --shadow-md: 0 6px 18px rgba(20, 20, 30, 0.12), 0 1px 3px rgba(20, 20, 30, 0.08);
+  --shadow-lg: 0 18px 48px rgba(20, 20, 30, 0.18), 0 2px 8px rgba(20, 20, 30, 0.08);
+  --scrollbar: rgba(0, 0, 0, 0.13);
+  --scrollbar-hover: rgba(0, 0, 0, 0.24);
+  --selection: rgba(224, 86, 26, 0.18);
+  --noise-opacity: 0.025;
+
+  --cat-edit: #eb6834;
+  --cat-read: #2a78d6;
+  --cat-search: #1baf7a;
+  --cat-shell: #4a3aa7;
+  --cat-agent: #e87ba4;
+  --cat-other: #a3a3ad;
+  --chart-grid: #ececf0;
+  --chart-axis: #d1d1d9;
+}
+
+/* ------------------------------ accent variants ----------------------------- */
+[data-accent='blue'] {
+  --accent: #5b9dff;
+  --accent-hover: #74acff;
+  --accent-press: #4a8cf0;
+  --accent-soft: rgba(91, 157, 255, 0.14);
+  --accent-softer: rgba(91, 157, 255, 0.07);
+  --accent-line: rgba(91, 157, 255, 0.45);
+  --accent-glow: rgba(91, 157, 255, 0.38);
+  --selection: rgba(91, 157, 255, 0.26);
+  --fg-on-accent: #04101f;
+}
+[data-theme='light'][data-accent='blue'] {
+  --accent: #2563d9;
+  --accent-hover: #2f70e6;
+  --accent-press: #1f55bd;
+  --accent-soft: rgba(37, 99, 217, 0.1);
+  --accent-line: rgba(37, 99, 217, 0.4);
+  --selection: rgba(37, 99, 217, 0.16);
+  --fg-on-accent: #fff;
+}
+[data-accent='violet'] {
+  --accent: #a98bff;
+  --accent-hover: #b9a0ff;
+  --accent-press: #9877f5;
+  --accent-soft: rgba(169, 139, 255, 0.15);
+  --accent-softer: rgba(169, 139, 255, 0.07);
+  --accent-line: rgba(169, 139, 255, 0.45);
+  --accent-glow: rgba(169, 139, 255, 0.38);
+  --selection: rgba(169, 139, 255, 0.25);
+  --fg-on-accent: #120a24;
+}
+[data-theme='light'][data-accent='violet'] {
+  --accent: #6f45d9;
+  --accent-hover: #7b54e3;
+  --accent-press: #5f37c4;
+  --accent-soft: rgba(111, 69, 217, 0.1);
+  --accent-line: rgba(111, 69, 217, 0.4);
+  --selection: rgba(111, 69, 217, 0.16);
+  --fg-on-accent: #fff;
+}
+[data-accent='green'] {
+  --accent: #4fcf8a;
+  --accent-hover: #66d99a;
+  --accent-press: #3fbd79;
+  --accent-soft: rgba(79, 207, 138, 0.14);
+  --accent-softer: rgba(79, 207, 138, 0.07);
+  --accent-line: rgba(79, 207, 138, 0.45);
+  --accent-glow: rgba(79, 207, 138, 0.36);
+  --selection: rgba(79, 207, 138, 0.24);
+  --fg-on-accent: #031a0d;
+}
+[data-theme='light'][data-accent='green'] {
+  --accent: #178a4b;
+  --accent-hover: #1b9853;
+  --accent-press: #127a41;
+  --accent-soft: rgba(23, 138, 75, 0.1);
+  --accent-line: rgba(23, 138, 75, 0.4);
+  --selection: rgba(23, 138, 75, 0.16);
+  --fg-on-accent: #fff;
+}
+[data-accent='rose'] {
+  --accent: #ff6f91;
+  --accent-hover: #ff86a2;
+  --accent-press: #f05c80;
+  --accent-soft: rgba(255, 111, 145, 0.14);
+  --accent-softer: rgba(255, 111, 145, 0.07);
+  --accent-line: rgba(255, 111, 145, 0.45);
+  --accent-glow: rgba(255, 111, 145, 0.38);
+  --selection: rgba(255, 111, 145, 0.24);
+  --fg-on-accent: #24040c;
+}
+[data-theme='light'][data-accent='rose'] {
+  --accent: #d6336a;
+  --accent-hover: #e23f76;
+  --accent-press: #bf285c;
+  --accent-soft: rgba(214, 51, 106, 0.1);
+  --accent-line: rgba(214, 51, 106, 0.4);
+  --selection: rgba(214, 51, 106, 0.15);
+  --fg-on-accent: #fff;
+}

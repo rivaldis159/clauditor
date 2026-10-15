@@ -1,0 +1,436 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-2);
+}
+
+/* ------------------------------------------------------------------ title bar */
+.titlebar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: var(--titlebar-h);
+  flex: none;
+  padding-left: 10px;
+  /* leave room for the native window controls drawn by titleBarOverlay */
+  padding-right: calc(100% - env(titlebar-area-x, 0px) - env(titlebar-area-width, calc(100% - 138px)));
+  background: var(--bg-0);
+  border-bottom: 1px solid var(--line-soft);
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+.titlebar-left,
+.titlebar-right {
+  display: flex;
+  align-items: center;
+  flex: 1 1 0;
+  min-width: 0;
+}
+.titlebar-right {
+  justify-content: flex-end;
+  gap: 2px;
+  padding-right: 8px;
+}
+.titlebar-right .icon-btn,
+.titlebar-left > * {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+.titlebar-right .icon-btn {
+  width: 28px;
+  height: 26px;
+  color: var(--fg-2);
+}
+.titlebar-right .icon-btn.on-soft {
+  color: var(--fg-1);
+}
+
+.titlebar-logo {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-right: 4px;
+}
+.logo-mark {
+  display: block;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+}
+
+.menubar {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+  overflow: hidden;
+}
+.menubar-item {
+  height: 26px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg-1);
+  font-size: var(--fs-md);
+  line-height: 26px;
+  white-space: nowrap;
+}
+.menubar-item:hover,
+.menubar-item.open {
+  background: var(--bg-3);
+  color: var(--fg-0);
+}
+
+.titlebar-center {
+  display: flex;
+  justify-content: center;
+  flex: 0 1 520px;
+  min-width: 160px;
+  padding: 0 12px;
+}
+.command-center {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 520px;
+  height: 26px;
+  padding: 0 6px 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-1);
+  color: var(--fg-2);
+  font-size: var(--fs-sm);
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease);
+}
+.command-center:hover {
+  border-color: var(--line-strong);
+  background: var(--bg-3);
+  color: var(--fg-1);
+}
+.cc-label {
+  flex: 1 1 auto;
+  text-align: center;
+  color: var(--fg-1);
+  font-weight: 500;
+}
+.cc-hint {
+  display: flex;
+  gap: 3px;
+  flex: none;
+}
+.cc-hint kbd {
+  height: 17px;
+  padding: 0 4px;
+  font-size: 10px;
+  border-bottom-width: 1px;
+  background: var(--bg-2);
+}
+
+/* the "heat line": a molten sweep along the title bar while Claude works */
+.titlebar-heat {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent 0%, var(--accent) 45%, color-mix(in srgb, var(--accent) 40%, #fff3) 50%, var(--accent) 55%, transparent 100%);
+  background-size: 50% 100%;
+  background-repeat: no-repeat;
+  transition: opacity 400ms var(--ease);
+}
+.titlebar.is-working .titlebar-heat {
+  opacity: 1;
+  animation: heat-sweep 2.6s linear infinite;
+}
+@keyframes heat-sweep {
+  from {
+    background-position: -60% 0;
+  }
+  to {
+    background-position: 160% 0;
+  }
+}
+
+/* ------------------------------------------------------------------ layout */
+.workbench {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.main-col {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  min-width: 0;
+  background: var(--bg-1);
+  border-right: 1px solid var(--line-soft);
+}
+
+.agent {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  min-width: 0;
+  background: var(--bg-1);
+  border-left: 1px solid var(--line-soft);
+}
+
+.bottom-panel {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  min-height: 0;
+  background: var(--bg-1);
+  border-top: 1px solid var(--line-soft);
+}
+
+/* sashes */
+.sash {
+  position: relative;
+  flex: none;
+  z-index: 20;
+}
+.sash-x {
+  width: 0;
+  cursor: ew-resize;
+}
+.sash-x::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -3px;
+  width: 6px;
+}
+.sash-y {
+  height: 0;
+  cursor: ns-resize;
+}
+.sash-y::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -3px;
+  height: 6px;
+}
+.sash::after {
+  content: '';
+  position: absolute;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 120ms var(--ease) 0ms;
+}
+.sash-x::after {
+  top: 0;
+  bottom: 0;
+  left: -1px;
+  width: 2px;
+}
+.sash-y::after {
+  left: 0;
+  right: 0;
+  top: -1px;
+  height: 2px;
+}
+.sash:hover::after {
+  opacity: 0.8;
+  transition-delay: 180ms;
+}
+.sash.dragging::after {
+  opacity: 1;
+  transition-delay: 0ms;
+}
+body.resizing-x,
+body.resizing-x * {
+  cursor: ew-resize !important;
+}
+body.resizing-y,
+body.resizing-y * {
+  cursor: ns-resize !important;
+}
+
+/* ------------------------------------------------------------------ activity bar */
+.activitybar {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: var(--activity-w);
+  flex: none;
+  padding: 4px 0 6px;
+  background: var(--bg-0);
+  border-right: 1px solid var(--line-soft);
+}
+.activity-top,
+.activity-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.activity-item {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--fg-3);
+  transition: color var(--dur-fast) var(--ease);
+}
+.activity-item:hover {
+  color: var(--fg-1);
+}
+.activity-item.active {
+  color: var(--fg-0);
+}
+.activity-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  border-radius: 0 2px 2px 0;
+  background: var(--accent);
+}
+.activity-badge {
+  position: absolute;
+  right: 6px;
+  bottom: 7px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--fg-on-accent);
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--bg-0);
+}
+.activity-live {
+  position: absolute;
+  right: 11px;
+  top: 10px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 0 2px var(--bg-0);
+}
+.activity-live.busy {
+  background: var(--accent);
+  animation: ember 2.2s ease-in-out infinite;
+}
+
+/* ------------------------------------------------------------------ status bar */
+.statusbar {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  height: var(--statusbar-h);
+  flex: none;
+  padding: 0 6px;
+  background: var(--bg-0);
+  border-top: 1px solid var(--line-soft);
+  color: var(--fg-2);
+  font-size: var(--fs-sm);
+}
+.sb-left,
+.sb-right {
+  display: flex;
+  align-items: stretch;
+  gap: 1px;
+  min-width: 0;
+}
+.sb-left {
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+.sb-right {
+  flex: none;
+}
+.sb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0 7px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: inherit;
+  font-size: var(--fs-sm);
+  line-height: 1;
+  white-space: nowrap;
+}
+button.sb-item:hover {
+  background: var(--bg-3);
+  color: var(--fg-0);
+}
+.sb-item.static {
+  cursor: default;
+}
+.sb-item svg {
+  flex: none;
+}
+.sb-branch {
+  max-width: 180px;
+}
+.sb-busy {
+  color: var(--fg-3);
+}
+.sb-sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+.sb-claude {
+  flex: 0 1 auto;
+}
+.sb-claude-title {
+  max-width: 260px;
+  color: var(--fg-1);
+}
+.sb-claude.busy .sb-claude-title {
+  color: var(--accent);
+}
+.sb-sep {
+  color: var(--fg-3);
+}
+.sb-icon.on {
+  color: var(--accent);
+}
+.sb-ide.connected {
+  color: var(--ok);
+}
+
+/* file icons */
+.ficon {
+  display: block;
+  flex: none;
+  object-fit: contain;
+}

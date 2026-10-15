@@ -1,0 +1,39 @@
+# electron-builder only assembles dist/win-unpacked (asar, native modules, exe icon/metadata);
+# the installer is built from it with Inno Setup (build/installer.iss, scripts/installer.mjs).
+appId: id.rivaldi.clauditor
+productName: Clauditor
+copyright: Copyright © 2026 Rivaldi
+directories:
+  output: dist
+  buildResources: build
+# the Electron that is already installed for development; nothing to download
+electronDist: node_modules/electron/dist
+# the UI speaks English and Indonesian; Chromium only needs these locale packs
+electronLanguages: [en-US, id]
+files:
+  - out/**
+  - package.json
+  - '!**/*.map'
+  - '!node_modules/**/*.pdb'
+  # Anthropic's Agent SDK is not redistributed (it is a devDependency, so not packaged): the app
+  # downloads it from the npm registry on first run, under Anthropic's terms
+  - '!node_modules/@anthropic-ai/**'
+  # x64 Windows build: drop the other platforms' terminal binaries
+  - '!node_modules/node-pty/prebuilds/darwin-*/**'
+  - '!node_modules/node-pty/prebuilds/win32-arm64/**'
+  - '!node_modules/node-pty/third_party/conpty/*/win10-arm64/**'
+asar: true
+asarUnpack:
+  - node_modules/node-pty/**
+  - node_modules/@vscode/ripgrep-win32-x64/**
+extraResources:
+  - from: resources/icon.png
+    to: icon.png
+npmRebuild: false
+nodeGypRebuild: false
+win:
+  target:
+    - target: dir
+      arch: [x64]
+  icon: build/icon.ico
+  executableName: Clauditor
