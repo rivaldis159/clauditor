@@ -32,13 +32,26 @@ in, and every step lands on the timeline.*
 - **Activity strip.** A seismograph above the timeline shows every step over time (long pauses folded);
   hover for details, click to jump.
 - **Claude's plan.** The to-do list (TodoWrite/Task) shows with progress.
+- **Model, effort and context at a glance.** The session header shows which model answers, its effort
+  level and how full the context window is. Click it for the details in plain words: the model's
+  description and window size, what the effort level means and where it was set (Claude desktop,
+  Clauditor or your Claude Code settings), when Claude Code will auto-compact, and the token totals.
+  For sessions run in Clauditor the numbers come from Claude Code's own `/context` measurement,
+  broken down into system prompt, tools, MCP, memory files and messages.
 
 ### Run Claude Code from Clauditor
 - The Claude panel runs the same Claude Code that Claude desktop ships (through Anthropic's Agent SDK).
 - Code Claude writes **streams in character by character**.
 - **Interactive permissions**: approve or deny edits and commands, answer Claude's questions, approve plans.
-- **Models and effort follow Claude**: the model list (with descriptions) and the effort levels each model
-  supports are read from Claude Code itself, so new models appear without updating Clauditor.
+- **Models and effort follow Claude**: the model list (with descriptions and context window sizes) and the
+  effort levels each model supports are read from Claude Code itself, so new models appear without
+  updating Clauditor. The pickers explain each choice and say what "Default" resolves to (your Claude Code
+  settings or its recommendation); effort can be changed in the middle of a session.
+- **Claude desktop's sessions stay intact.** Claude desktop only shows what its own Claude Code ran, so a
+  reply sent from Clauditor would never appear there. Continuing one of its sessions from Clauditor
+  therefore makes a copy and goes on there (marked "Copy in Clauditor"); **Continue in Claude desktop**
+  opens the original instead, with your message on the clipboard. If the same session is open in
+  Clauditor and in Claude desktop or a terminal at once, Clauditor warns you.
 - Attach images, mention files with `@`, send the editor selection to the message (Ctrl+Alt+L).
 - **Send to Claude desktop**: write a prompt in Clauditor and open it as a new Claude desktop session.
 - **One-time sign-in.** Claude desktop signs in on its own, so the Claude Code that Clauditor runs needs its

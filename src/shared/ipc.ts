@@ -4,9 +4,11 @@ import type {
   AppInfo,
   AppState,
   ClaudeAuthStatus,
+  ClaudeDefaults,
   ClaudeEnvironment,
   ClaudeUpdateNotice,
   DeepPartial,
+  Effort,
   FileContent,
   FileEntry,
   FsChangeBatch,
@@ -133,6 +135,7 @@ export interface InvokeMap {
   'runner:respond': (runId: string, requestId: string, decision: PermissionDecision) => void
   'runner:setMode': (runId: string, mode: PermissionMode) => void
   'runner:setModel': (runId: string, model: string) => void
+  'runner:setEffort': (runId: string, effort: Effort | '') => void
   'runner:models': () => ModelOption[]
   'runner:pending': () => PermissionRequest[]
   'runner:oneShot': (cwd: string, prompt: string) => string
@@ -141,6 +144,8 @@ export interface InvokeMap {
   // Claude desktop integration (versions, fonts, models; follows Claude updates)
   'claude:environment': () => ClaudeEnvironment
   'claude:refresh': () => ClaudeEnvironment
+  /** the model / effort Claude Code's settings choose for a folder ("Default" in the pickers) */
+  'claude:defaults': (cwd: string | null) => ClaudeDefaults
 
   // IDE bridge (Claude Code IDE protocol)
   'ide:status': () => IdeBridgeStatus

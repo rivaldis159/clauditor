@@ -1,7 +1,7 @@
 {
   "name": "clauditor",
   "productName": "Clauditor",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Clauditor — a code editor for Claude Code, connected to Claude desktop",
   "author": "Rivaldi",
   "license": "MIT",
@@ -29,7 +29,7 @@
     "dist": "npm run build && electron-builder --win --dir --config electron-builder.yml && node scripts/installer.mjs",
     "dist:dir": "npm run build && electron-builder --win --dir --config electron-builder.yml",
     "i18n": "node scripts/i18n-check.mjs",
-    "demo": "npm run build && node scripts/demo/record-demo.mjs out/demo && node scripts/demo/make-gif.mjs out/demo docs/demo.gif && node scripts/demo/social-preview.mjs out/demo/poster.png docs/social-preview.png"
+    "demo": "npm run build && node scripts/demo/record-demo.mjs .demo && node scripts/demo/make-gif.mjs .demo docs/demo.gif && node scripts/demo/social-preview.mjs .demo/poster.png docs/social-preview.png"
   },
   "dependencies": {
     "@vscode/ripgrep": "1.18.0",

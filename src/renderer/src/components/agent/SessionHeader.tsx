@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import { ChevronRight, Coins, Copy, Ellipsis, ExternalLink, Eye, EyeOff, FileSearch, Files, FolderOpen, Gauge, ListFilter, Play, Timer, Wrench, X } from 'lucide-react'
-import type { SessionMeta, SessionStats, TodoItem } from '@shared/types'
+import type { RunnerInfo, SessionMeta, SessionStats, TodoItem } from '@shared/types'
 import * as P from '@/lib/paths'
 import { compact, duration, num, usd } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { invoke } from '@/lib/ipc'
 import { useApp } from '@/state/app'
 import { useEditors } from '@/state/editors'
-import { originLabel, sessionTitle, useSessions } from '@/state/sessions'
+import { originFor, sessionTitle, useSessions } from '@/state/sessions'
 import { openFolder } from '@/state/workspace'
 import { TodoView } from './ToolCard'
+import { ModelStrip } from './SessionInfo'
 import type { TimelineFilter } from './Timeline'
 
 export function SessionHeader({
@@ -17,7 +18,7 @@ export function SessionHeader({
   stats,
   filesChanged,
   busy,
-  runnerState,
+  runner,
   filter,
   setFilter
 }: {
@@ -25,11 +26,13 @@ export function SessionHeader({
   stats: SessionStats
   filesChanged: number
   busy: boolean
-  runnerState: string | null
+  runner: RunnerInfo | null
   filter: TimelineFilter
   setFilter(f: TimelineFilter): void
 }) {
   const t = useT()
+  const runnerState = runner?.state ?? null
+  const origin = originFor(meta)
   const follow = useSessions((s) => s.follow)
   const workspace = useApp((s) => s.workspace)
   const title = sessionTitle(meta)
@@ -87,7 +90,7 @@ export function SessionHeader({
       <div className="agent-sub truncate">
         <span className={`agent-state ${status}`}>{statusText}</span>
         <span className="sep">·</span>
-        <span>{originLabel(meta.entrypoint)}</span>
+        <span data-tip={origin.tip ?? undefined}>{origin.label}</span>
         {meta.cwd && (
           <>
             <span className="sep">·</span>
@@ -103,6 +106,7 @@ export function SessionHeader({
           </>
         )}
       </div>
+      <ModelStrip meta={meta} stats={stats} runner={runner} />
       <div className="agent-stats">
         <span className="stat" data-tip={t('Session duration')}>
           <Timer size={12} strokeWidth={2} /> {span ? duration(span) : '—'}

@@ -138,7 +138,9 @@ export function SessionsView() {
               gitBranch: null,
               version: l.version,
               live: l,
-              startedByClauditor: false
+              startedByClauditor: false,
+              desktop: null,
+              forkedFrom: null
             } satisfies SessionMeta)
       })
       .filter(match)

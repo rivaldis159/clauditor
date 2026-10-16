@@ -46,5 +46,6 @@ export const main: Record<string, string> = {
   '{detail} — attempt {n} of {max}': '{detail} — percobaan {n}/{max}',
   'API error': 'Kesalahan API',
   'Hook failed: {errors}': 'Hook gagal: {errors}',
-  'File changed outside Claude: {file}': 'Berkas diubah di luar Claude: {file}'
+  'File changed outside Claude: {file}': 'Berkas diubah di luar Claude: {file}',
+  'This version of Claude Code cannot change the effort during a session.': 'Versi Claude Code ini tidak bisa mengubah usaha di tengah sesi.'
 }

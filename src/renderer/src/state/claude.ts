@@ -1,7 +1,8 @@
 // What Claude desktop provides right now (versions, fonts, models, effort levels), as reported by
 // the main process; updated live when Claude updates.
+import { useEffect } from 'react'
 import { create } from 'zustand'
-import type { ClaudeEnvironment, ClaudeUpdateNotice, Effort, ModelOption } from '@shared/types'
+import type { ClaudeDefaults, ClaudeEnvironment, ClaudeUpdateNotice, Effort, ModelOption } from '@shared/types'
 import { applyClaudeFonts } from '@/lib/claudeFonts'
 import { t } from '@/lib/i18n'
 import { errorText, invoke, on } from '@/lib/ipc'
@@ -10,12 +11,25 @@ import { useApp } from './app'
 interface ClaudeStore {
   env: ClaudeEnvironment | null
   checking: boolean
+  /** Claude Code's own model / effort defaults per folder ('' = no folder) */
+  defaults: Record<string, ClaudeDefaults>
   refresh(): Promise<void>
+  loadDefaults(cwd: string | null): Promise<ClaudeDefaults | null>
 }
 
 export const useClaude = create<ClaudeStore>((set, get) => ({
   env: null,
   checking: false,
+  defaults: {},
+  async loadDefaults(cwd) {
+    try {
+      const d = await invoke('claude:defaults', cwd)
+      set({ defaults: { ...get().defaults, [cwd ?? '']: d } })
+      return d
+    } catch {
+      return null
+    }
+  },
   async refresh() {
     if (get().checking) return
     set({ checking: true })
@@ -30,6 +44,16 @@ export const useClaude = create<ClaudeStore>((set, get) => ({
     }
   }
 }))
+
+/** Claude Code's defaults for a folder, loaded on first use (call `loadDefaults` to re-read). */
+export function useClaudeDefaults(cwd: string | null): ClaudeDefaults | null {
+  const key = cwd ?? ''
+  const d = useClaude((s) => s.defaults[key])
+  useEffect(() => {
+    if (!d) void useClaude.getState().loadDefaults(key || null)
+  }, [key, d])
+  return d ?? null
+}
 
 /** Effort levels used when Claude's model list is not known yet. */
 export const FALLBACK_EFFORTS: Effort[] = ['low', 'medium', 'high', 'xhigh', 'max']

@@ -99,8 +99,13 @@ export async function readCliVersion(exe: string): Promise<string | null> {
 
 type RawModel = { value: string; displayName?: string; description?: string; resolvedModel?: string; supportsEffort?: boolean; supportedEffortLevels?: string[]; supportsFastMode?: boolean; supportsAutoMode?: boolean }
 
+export interface ModelWindow {
+  contextWindow: number
+  autoCompactAt: number | null
+}
+
 /** Claude Code's model rows as picker options; its "default" row means "don't pass a model". */
-export function toModelOption(m: RawModel): ModelOption {
+export function toModelOption(m: RawModel, window?: ModelWindow | null): ModelOption {
   return {
     value: m.value === 'default' ? '' : m.value,
     label: m.displayName || m.value,
@@ -108,8 +113,35 @@ export function toModelOption(m: RawModel): ModelOption {
     resolvedModel: m.resolvedModel ?? null,
     effortLevels: m.supportedEffortLevels ?? (m.supportsEffort ? ['low', 'medium', 'high'] : []),
     supportsFastMode: !!m.supportsFastMode,
-    supportsAutoMode: m.supportsAutoMode !== false
+    supportsAutoMode: m.supportsAutoMode !== false,
+    contextWindow: window?.contextWindow ?? null,
+    autoCompactAt: window?.autoCompactAt ?? null
   }
+}
+
+type ContextProbe = { rawMaxTokens?: number; maxTokens?: number; autoCompactThreshold?: number; isAutoCompactEnabled?: boolean }
+
+/**
+ * Each model's context window and auto-compact point, as Claude Code computes them for this user's
+ * settings (/context on an empty session: local, no model call). Stops at the time budget.
+ */
+async function probeWindows(q: ReturnType<Sdk['query']>, list: RawModel[], budgetMs = 15_000): Promise<Map<string, ModelWindow>> {
+  const out = new Map<string, ModelWindow>()
+  const ask = q as unknown as { getContextUsage?: (o: { detail: 'summary' }) => Promise<ContextProbe> }
+  if (typeof ask.getContextUsage !== 'function') return out
+  const deadline = Date.now() + budgetMs
+  for (const m of list) {
+    if (Date.now() > deadline) break
+    try {
+      await q.setModel(m.value === 'default' ? undefined : m.value)
+      const u = await ask.getContextUsage({ detail: 'summary' })
+      const contextWindow = Number(u.rawMaxTokens || u.maxTokens) || 0
+      if (contextWindow) out.set(m.value, { contextWindow, autoCompactAt: u.isAutoCompactEnabled && u.autoCompactThreshold ? u.autoCompactThreshold : null })
+    } catch {
+      break
+    }
+  }
+  return out
 }
 
 /** Starts Claude Code without a prompt (no API call) just to read what it offers. */
@@ -119,11 +151,12 @@ async function probeClaude(sdk: Sdk, exe: string, env: Record<string, string>): 
     prompt: idle as never,
     options: { cwd: os.tmpdir(), pathToClaudeCodeExecutable: exe, persistSession: false, strictMcpConfig: true, mcpServers: {}, settingSources: ['user'], env }
   })
-  const timer = setTimeout(() => q.close(), 30_000)
+  const timer = setTimeout(() => q.close(), 45_000)
   try {
     const init = (await q.initializationResult()) as { models?: RawModel[]; available_output_styles?: string[] }
     const list: RawModel[] = init.models?.length ? init.models : ((await q.supportedModels()) as RawModel[])
-    return { models: list.map(toModelOption), outputStyles: init.available_output_styles ?? [] }
+    const windows = await probeWindows(q, list)
+    return { models: list.map((m) => toModelOption(m, windows.get(m.value))), outputStyles: init.available_output_styles ?? [] }
   } finally {
     clearTimeout(timer)
     q.close()
@@ -230,12 +263,19 @@ export class ClaudeEnvironmentService extends EventEmitter {
       }
     }
 
+    // a model whose window was not measured this time (time budget) keeps the last known one
+    const models = probed?.models.length
+      ? probed.models.map((m) => {
+          const before = m.contextWindow ? null : prev.models.find((p) => p.value === m.value && p.contextWindow)
+          return before ? { ...m, contextWindow: before.contextWindow, autoCompactAt: before.autoCompactAt ?? null } : m
+        })
+      : prev.models
     this.env = {
       desktop: { version: desktop?.version ?? null, root: desktop?.root ?? null, kind: desktop?.kind ?? null },
       cli: { path: exe?.path ?? null, version: cliVersion, source: exe?.source ?? null },
       sdk: this.o.sdk.info(),
       fonts: findFonts(desktop?.resources ?? null),
-      models: probed?.models.length ? probed.models : prev.models,
+      models,
       outputStyles: probed?.outputStyles ?? prev.outputStyles,
       checkedAt: Date.now()
     }

@@ -2,7 +2,7 @@
 // while Clauditor follows it live. Frames come from Chromium's DevTools screencast (lossless PNG,
 // sent only when the page repaints), so idle stretches cost nothing.
 //
-// usage: npm run demo   (build, record into out/demo, then docs/demo.gif and docs/social-preview.png)
+// usage: npm run demo   (build, record into .demo/, then docs/demo.gif and docs/social-preview.png)
 //   node scripts/demo/record-demo.mjs <framesDir>     frames + frames.json + poster.png
 import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
@@ -24,6 +24,7 @@ const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'claud
 const home = path.join(root, 'claude-home')
 const workspace = path.join(root, 'weather-cli')
 const userData = path.join(root, 'userdata')
+const desktopData = path.join(root, 'desktop-data')
 for (const d of [home, workspace, userData, path.join(home, 'sessions'), path.join(home, 'ide')]) fs.mkdirSync(d, { recursive: true })
 
 const files = {
@@ -96,8 +97,9 @@ const append = (rec) => {
   parent = uuid
 }
 let msg = 0
-const usage = { input_tokens: 2400, output_tokens: 180, cache_read_input_tokens: 18200 }
-const assistant = (content) => append({ type: 'assistant', message: { id: `msg_demo_${++msg}`, role: 'assistant', model: 'claude-opus-5-5', content, usage } })
+// the conversation grows with every step, as a real one does
+const usage = () => ({ input_tokens: 2400, output_tokens: 180, cache_read_input_tokens: 38_200 + msg * 2600 })
+const assistant = (content) => append({ type: 'assistant', message: { id: `msg_demo_${++msg}`, role: 'assistant', model: 'claude-opus-5-5', content, usage: usage() } })
 const say = (text) => assistant([{ type: 'text', text }])
 let tools = 0
 const toolUse = (name, input) => {
@@ -117,6 +119,10 @@ const setStatus = (status) =>
 append({ type: 'user', message: { role: 'user', content: prompt } })
 append({ type: 'custom-title', customTitle: title })
 setStatus('idle')
+// Claude desktop's own record of the session: the model and effort it runs it with
+const desktopFolder = path.join(desktopData, 'claude-code-sessions', 'org', 'account')
+fs.mkdirSync(desktopFolder, { recursive: true })
+fs.writeFileSync(path.join(desktopFolder, 'local_demo.json'), JSON.stringify({ sessionId: 'local_demo', cliSessionId: sessionId, title, model: 'claude-opus-5-5', effort: 'high', permissionMode: 'acceptEdits', isArchived: false }))
 fs.writeFileSync(path.join(userData, 'settings.json'), JSON.stringify({ theme: 'dark', language: 'en', editor: { fontSize: 13, minimap: false } }))
 const abs = (f) => path.join(workspace, f)
 fs.writeFileSync(
@@ -182,7 +188,7 @@ async function todos(states) {
 const app = await electron.launch({
   executablePath: path.resolve('node_modules/electron/dist/electron.exe'),
   args: ['.', '--force-device-scale-factor=1'],
-  env: { ...process.env, CLAUDITOR_CLAUDE_HOME: home, CLAUDITOR_USER_DATA: userData, CLAUDITOR_OPEN_FOLDER: workspace },
+  env: { ...process.env, CLAUDITOR_CLAUDE_HOME: home, CLAUDITOR_USER_DATA: userData, CLAUDITOR_OPEN_FOLDER: workspace, CLAUDITOR_DESKTOP_DATA: desktopData },
   timeout: 60_000
 })
 const win = await app.firstWindow()
@@ -193,7 +199,17 @@ await app.evaluate(({ BrowserWindow }, size) => {
   bw.setContentSize(size.w, size.h)
   bw.center()
 }, { w: WIDTH, h: HEIGHT })
-await sleep(5000)
+// Clauditor asks Claude Code for its models (and their context windows) at start: wait for it
+const envFile = path.join(userData, 'claude-environment.json')
+const probed = () => {
+  try {
+    return JSON.parse(fs.readFileSync(envFile, 'utf8')).models.some((m) => m.contextWindow)
+  } catch {
+    return false
+  }
+}
+for (let t = Date.now(); !probed() && Date.now() - t < 45_000; ) await sleep(500)
+await sleep(2000)
 
 // Windows draws the window controls on top of the page, so they never reach the screencast;
 // paint look-alikes (same glyph font, size and colors as the title bar overlay) for the recording.

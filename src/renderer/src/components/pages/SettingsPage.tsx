@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react'
 import { FolderSearch, Moon, Monitor, RefreshCw, RotateCcw, Sun } from 'lucide-react'
-import type { Accent, DeepPartial, Effort, PermissionMode, Settings, ThemeSetting } from '@shared/types'
+import type { Accent, DeepPartial, Effort, ModelOption, PermissionMode, Settings, ThemeSetting } from '@shared/types'
 import { defaultSettings } from '@shared/defaults'
 import { LOCALES, type Locale } from '@shared/i18n'
 import { allCommands, prettyKeys } from '@/lib/commands'
 import { tk, useT, type T } from '@/lib/i18n'
-import { ago } from '@/lib/format'
+import { ago, compact } from '@/lib/format'
 import { claudeFontsActive } from '@/lib/claudeFonts'
+import { claudeText, defaultModel as resolveDefaultModel, effortHint, effortName, settingSourceLabel, shortModelLabel } from '@/lib/claudeInfo'
 import { invoke } from '@/lib/ipc'
 import { useApp } from '@/state/app'
 import { loginClaude, useSessions } from '@/state/sessions'
-import { effortsFor, modelFor, useClaude } from '@/state/claude'
+import { effortsFor, modelFor, useClaude, useClaudeDefaults } from '@/state/claude'
 import { useTerminals } from '@/state/terminals'
 import { MODES } from '@/components/agent/Composer'
 
@@ -44,11 +45,38 @@ function authLabel(t: T, method: string | null): string {
   return t('Signed in ({method}).', { method })
 }
 
-const LEVEL_LABELS: Record<string, string> = { low: tk('Low'), medium: tk('Medium'), high: tk('High'), xhigh: tk('Extra high'), max: tk('Max') }
-
 function levelLabel(t: T, level: string): string {
-  if (!level) return t('Model default')
-  return LEVEL_LABELS[level] ? t(LEVEL_LABELS[level]) : level.charAt(0).toUpperCase() + level.slice(1)
+  return level ? effortName(t, level) : t('Model default')
+}
+
+/** Every model Claude Code offers, with its context window and effort levels. */
+function ModelTable({ models }: { models: ModelOption[] }) {
+  const t = useT()
+  const rows = models.filter((m) => m.value)
+  if (!rows.length) return <span className="set-v">—</span>
+  return (
+    <table className="set-models">
+      <thead>
+        <tr>
+          <th>{t('Model')}</th>
+          <th>{t('Context window')}</th>
+          <th>{t('Effort levels')}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((m) => (
+          <tr key={m.value}>
+            <td>
+              <div className="set-model-name">{shortModelLabel(m.label)}</div>
+              {m.description && <div className="set-model-desc">{claudeText(t, m.description)}</div>}
+            </td>
+            <td className="num">{m.contextWindow ? t('{n} tokens', { n: compact(m.contextWindow) }) : '—'}</td>
+            <td>{m.effortLevels?.length ? m.effortLevels.map((l) => effortName(t, l)).join(', ') : t('None')}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
 }
 
 function Toggle({ value, onChange }: { value: boolean; onChange(v: boolean): void }) {
@@ -126,6 +154,18 @@ export function SettingsPage() {
   const modeHint = MODES.find((m) => m.value === c.defaultPermissionMode)?.hint
   const defaultModel = modelFor(models, c.defaultModel)
   const defaultEfforts = effortsFor(models, c.defaultModel)
+  const claudeDefaults = useClaudeDefaults(null)
+  const picked = resolveDefaultModel(models, claudeDefaults)
+  const pickedLabel = picked.value ? shortModelLabel(picked.value.label) : picked.id
+  const defaultModelHint = c.defaultModel
+    ? defaultModel?.description
+      ? claudeText(t, defaultModel.description)
+      : t('For sessions started from Clauditor.')
+    : pickedLabel
+      ? picked.source
+        ? t('Claude Code decides: {model}, set in {source}.', { model: pickedLabel, source: settingSourceLabel(t, picked.source) })
+        : t("Claude Code decides: {model}, its recommendation.", { model: pickedLabel })
+      : t('For sessions started from Clauditor.')
 
   return (
     <div className="page settings">
@@ -378,8 +418,6 @@ export function SettingsPage() {
                   </span>
                   <span className="set-k">{t('Fonts')}</span>
                   <span className="set-v">{claudeFontsActive() ? t("Claude's fonts (Anthropic Sans, Serif and Mono)") : t('Fallback fonts — Claude desktop not found')}</span>
-                  <span className="set-k">{t('Models')}</span>
-                  <span className="set-v">{models.length ? models.map((m) => (m.value ? m.label : t('Default (recommended)'))).join(', ') : '—'}</span>
                 </div>
                 <div className="set-inline">
                   <button className="btn btn-sm" disabled={checkingClaude} onClick={() => void useClaude.getState().refresh()}>
@@ -389,10 +427,13 @@ export function SettingsPage() {
                 </div>
               </div>
             </Row>
+            <Row label={t('Models')} hint={t('What Claude Code offers right now, read from Claude Code itself. The context window is how much of a conversation the model can keep in mind.')} wide>
+              <ModelTable models={models} />
+            </Row>
             <Row label={t('Keep the Agent SDK in sync with Claude')} hint={t("Claude's Agent SDK is fetched from npm on first use, and again whenever Claude desktop brings a newer Claude Code. Turn this off to keep the copy you have.")}>
               <Toggle value={c.syncSdk} onChange={(v) => update({ claude: { syncSdk: v } })} />
             </Row>
-            <Row label={t('Default model')} hint={defaultModel?.description || t('For sessions started from Clauditor.')}>
+            <Row label={t('Default model')} hint={defaultModelHint}>
               <select className="input set-select" value={c.defaultModel} onChange={(ev) => update({ claude: { defaultModel: ev.target.value } })}>
                 {(models.length ? models : [{ value: '', label: t('Default'), description: '' }]).map((m) => (
                   <option key={m.value || 'd'} value={m.value}>
@@ -410,7 +451,16 @@ export function SettingsPage() {
                 ))}
               </select>
             </Row>
-            <Row label={t('Default effort level')} hint={defaultEfforts.length ? t('Levels offered by Claude Code for the default model.') : t('The default model has no effort setting.')}>
+            <Row
+              label={t('Default effort level')}
+              hint={
+                !defaultEfforts.length
+                  ? t('The default model has no effort setting.')
+                  : defaultEfforts.includes(c.defaultEffort)
+                    ? effortHint(t, c.defaultEffort)
+                    : t("How long Claude thinks before answering. Model default: the model's own level, or the one you saved with /effort in Claude Code.")
+              }
+            >
               <select
                 className="input set-select"
                 value={defaultEfforts.includes(c.defaultEffort) ? c.defaultEffort : ''}

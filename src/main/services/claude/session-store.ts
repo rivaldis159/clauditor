@@ -6,7 +6,10 @@ import type { SessionMeta, SessionSnapshot, SessionUpdate, SubagentInfo, Timelin
 import { TranscriptParser } from './transcript'
 import type { SessionIndex } from './session-index'
 import type { LiveRegistry } from './registry'
+import type { DesktopSessions } from './desktop-sessions'
 import { decodeBuffer } from '../../lib/text-codec'
+
+const liveKey = (l: SessionMeta['live']) => (l ? `${l.status}|${l.pid}|${l.peers.map((p) => `${p.pid}:${p.status}`).join(',')}` : '')
 
 const CHUNK = 1024 * 1024
 const yieldNow = () => new Promise<void>((r) => setImmediate(r))
@@ -70,13 +73,14 @@ export class SessionStore extends EventEmitter {
   constructor(
     private readonly claudeHome: string,
     private readonly index: SessionIndex,
-    private readonly registry: LiveRegistry
+    private readonly registry: LiveRegistry,
+    private readonly desktop: DesktopSessions
   ) {
     super()
     registry.on('changed', () => {
       for (const s of this.open.values()) {
         const live = registry.get(s.id)
-        if ((live?.status ?? null) !== (s.meta.live?.status ?? null) || (live === null) !== (s.meta.live === null)) {
+        if (liveKey(live) !== liveKey(s.meta.live)) {
           s.meta = { ...s.meta, live }
           this.emitUpdate(s, { added: [], updated: [] })
         }
@@ -93,7 +97,9 @@ export class SessionStore extends EventEmitter {
       firstPrompt: s.meta.firstPrompt ?? p.meta.firstPrompt,
       updatedAt: Math.max(s.meta.updatedAt, p.meta.lastTs ?? 0),
       gitBranch: p.meta.gitBranch ?? s.meta.gitBranch,
-      live: this.registry.get(s.id)
+      live: this.registry.get(s.id),
+      desktop: this.desktop.get(s.id),
+      forkedFrom: s.meta.forkedFrom ?? p.meta.forkedFrom
     }
   }
 

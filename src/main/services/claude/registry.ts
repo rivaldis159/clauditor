@@ -15,6 +15,22 @@ function alive(pid: number): boolean {
 }
 
 /**
+ * One entry per session: the most recently started process, with the others on the same session
+ * (say Claude desktop and Clauditor both holding it) listed as peers.
+ */
+export function groupLive(entries: LiveSessionInfo[]): Map<string, LiveSessionInfo> {
+  const bySession = new Map<string, LiveSessionInfo[]>()
+  for (const e of entries) bySession.set(e.sessionId, [...(bySession.get(e.sessionId) ?? []), e])
+  const out = new Map<string, LiveSessionInfo>()
+  for (const [id, list] of bySession) {
+    const sorted = [...list].sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0) || b.pid - a.pid)
+    const [primary, ...rest] = sorted
+    out.set(id, { ...primary, peers: rest.map((p) => ({ pid: p.pid, entrypoint: p.entrypoint, status: p.status })) })
+  }
+  return out
+}
+
+/**
  * Watches ~/.claude/sessions/<pid>.json — the registry every running Claude Code process
  * (including the ones Claude desktop starts) keeps up to date with its status.
  */
@@ -73,14 +89,14 @@ export class LiveRegistry extends EventEmitter {
       } catch {
         names = []
       }
-      const next = new Map<string, LiveSessionInfo>()
+      const all: LiveSessionInfo[] = []
       await Promise.all(
         names.map(async (n) => {
           try {
             const raw = JSON.parse(await fsp.readFile(path.join(this.dir, n), 'utf8'))
             const pid = Number(raw.pid)
             if (!raw.sessionId || !alive(pid)) return
-            const info: LiveSessionInfo = {
+            all.push({
               pid,
               sessionId: String(raw.sessionId),
               cwd: String(raw.cwd ?? ''),
@@ -91,15 +107,15 @@ export class LiveRegistry extends EventEmitter {
               entrypoint: typeof raw.entrypoint === 'string' ? raw.entrypoint : null,
               kind: typeof raw.kind === 'string' ? raw.kind : null,
               version: typeof raw.version === 'string' ? raw.version : null,
-              startedAt: Number(raw.startedAt) || null
-            }
-            const prev = next.get(info.sessionId)
-            if (!prev || (info.startedAt ?? 0) > (prev.startedAt ?? 0)) next.set(info.sessionId, info)
+              startedAt: Number(raw.startedAt) || null,
+              peers: []
+            })
           } catch {
             /* file mid-write */
           }
         })
       )
+      const next = groupLive(all)
       const sig = JSON.stringify([...next.values()].sort((a, b) => a.pid - b.pid))
       if (sig !== this.signature) {
         const prev = this.live

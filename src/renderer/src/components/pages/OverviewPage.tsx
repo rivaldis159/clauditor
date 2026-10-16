@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ExternalLink, FileDiff, FileText, Play, Sparkles, Table2 } from 'lucide-react'
-import type { SessionFileChange, TimelineEvent, ToolEvent } from '@shared/types'
+import type { ModelOption, SessionFileChange, TimelineEvent, ToolEvent } from '@shared/types'
 import { FileIcon } from '@/lib/fileIcons'
 import { clock, compact, date, duration, num, usd } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { invoke } from '@/lib/ipc'
+import { contextView, effortName, modelLabel, sessionEffort, sessionModel } from '@/lib/claudeInfo'
 import * as P from '@/lib/paths'
 import { useApp } from '@/state/app'
+import { useClaude } from '@/state/claude'
 import { useEditors } from '@/state/editors'
-import { originLabel, sessionTitle, useSessions } from '@/state/sessions'
+import { originFor, runnerForSession, sessionTitle, useSessions } from '@/state/sessions'
 import { SERIES, seriesOf, toolMeta } from '@/components/agent/toolInfo'
 
 type SeriesKey = (typeof SERIES)[number]['key']
+const NO_MODELS: ModelOption[] = []
 
 function Tile({ label, value, sub }: { label: string; value: string; sub?: React.ReactNode }) {
   return (
@@ -320,8 +323,14 @@ export function OverviewPage({ sessionId }: { sessionId: string }) {
     if (!useSessions.getState().data[sessionId]) void useSessions.getState().open(sessionId)
   }, [sessionId])
   const tools = useMemo(() => (data?.events.filter((e) => e.kind === 'tool') ?? []) as ToolEvent[], [data?.events])
+  const models = useClaude((s) => s.env?.models) ?? NO_MODELS
+  const runners = useSessions((s) => s.runners)
   if (!data) return <div className="page center muted">{t('Loading session…')}</div>
   const { meta, stats } = data
+  const runner = runnerForSession({ runners }, sessionId)
+  const model = sessionModel(meta, stats, runner, models)
+  const effort = sessionEffort(meta, runner, model.row, null)
+  const context = contextView(stats, runner, model.row)
   const first = stats.firstTs ?? meta.createdAt
   const last = stats.lastTs ?? meta.updatedAt
   const totalTokens = stats.inputTokens + stats.outputTokens + stats.cacheReadTokens + stats.cacheCreationTokens
@@ -334,7 +343,7 @@ export function OverviewPage({ sessionId }: { sessionId: string }) {
       <div className="ov-inner">
         <header className="ov-head">
           <div className="ov-kicker">
-            <Sparkles size={13} /> {t('Session overview')} · {originLabel(meta.entrypoint)}
+            <Sparkles size={13} /> {t('Session overview')} · {originFor(meta).label}
           </div>
           <h1 className="ov-title">{sessionTitle(meta)}</h1>
           <div className="ov-sub">
@@ -346,7 +355,7 @@ export function OverviewPage({ sessionId }: { sessionId: string }) {
             {stats.models.length > 0 && (
               <>
                 <span className="sep">·</span>
-                <span>{stats.models.join(', ')}</span>
+                <span data-tip={stats.models.join(', ')}>{stats.models.map((id) => modelLabel(models, id)).join(', ')}</span>
               </>
             )}
           </div>
@@ -392,39 +401,68 @@ export function OverviewPage({ sessionId }: { sessionId: string }) {
           <FilesTable files={data.files} sessionId={sessionId} cwd={data.cwd} />
         </section>
 
-        <section className="card">
-          <h2>{t('Token usage')}</h2>
-          <table className="viz-table tokens">
-            <tbody>
-              <tr>
-                <td>{t('Input')}</td>
-                <td>{num(stats.inputTokens)}</td>
-              </tr>
-              <tr>
-                <td>{t('Output')}</td>
-                <td>{num(stats.outputTokens)}</td>
-              </tr>
-              <tr>
-                <td>{t('Cache read')}</td>
-                <td>{num(stats.cacheReadTokens)}</td>
-              </tr>
-              <tr>
-                <td>{t('Cache write')}</td>
-                <td>{num(stats.cacheCreationTokens)}</td>
-              </tr>
-              <tr>
-                <td>{t('Latest context size')}</td>
-                <td>{num(stats.contextTokens)}</td>
-              </tr>
-              {stats.costUSD !== null && (
+        <div className="ov-grid">
+          <section className="card">
+            <h2>{t('Model and context')}</h2>
+            <table className="viz-table tokens">
+              <tbody>
                 <tr>
-                  <td>{t('Estimated cost')}</td>
-                  <td>{usd(stats.costUSD)}</td>
+                  <td>{t('Model')}</td>
+                  <td>{model.label ? <span data-tip={model.id ?? undefined}>{model.label}</span> : '—'}</td>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </section>
+                {effort.source !== 'unknown' && !effort.unsupported && (
+                  <tr>
+                    <td>{t('Effort')}</td>
+                    <td>{effort.level ? effortName(t, effort.level) : t('effort::Default')}</td>
+                  </tr>
+                )}
+                <tr>
+                  <td>{t('Context window')}</td>
+                  <td>{model.row?.contextWindow ? t('{n} tokens', { n: num(model.row.contextWindow) }) : '—'}</td>
+                </tr>
+                <tr>
+                  <td>{t('Context in use')}</td>
+                  <td>{context ? (context.percent !== null ? t('{used} tokens ({pct}%)', { used: num(context.used), pct: num(context.percent) }) : t('{used} tokens', { used: num(context.used) })) : '—'}</td>
+                </tr>
+                {context?.autoCompactAt ? (
+                  <tr>
+                    <td>{t('Auto-compacts at')}</td>
+                    <td>{t('{n} tokens', { n: num(context.autoCompactAt) })}</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </section>
+          <section className="card">
+            <h2>{t('Token usage')}</h2>
+            <table className="viz-table tokens">
+              <tbody>
+                <tr>
+                  <td>{t('New input')}</td>
+                  <td>{num(stats.inputTokens)}</td>
+                </tr>
+                <tr>
+                  <td>{t('Output')}</td>
+                  <td>{num(stats.outputTokens)}</td>
+                </tr>
+                <tr>
+                  <td>{t('Read from cache')}</td>
+                  <td>{num(stats.cacheReadTokens)}</td>
+                </tr>
+                <tr>
+                  <td>{t('Written to cache')}</td>
+                  <td>{num(stats.cacheCreationTokens)}</td>
+                </tr>
+                {stats.costUSD !== null && (
+                  <tr>
+                    <td>{t('Estimated cost')}</td>
+                    <td>{usd(stats.costUSD)}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </section>
+        </div>
       </div>
     </div>
   )

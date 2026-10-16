@@ -857,6 +857,48 @@
   color: var(--fg-3);
   font-size: var(--fs-xs);
 }
+/* models offered by Claude Code */
+.set-models {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--bg-1);
+  font-size: var(--fs-sm);
+  overflow: hidden;
+}
+.set-models th {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--fg-2);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+.set-models td {
+  padding: 7px 12px;
+  border-top: 1px solid var(--line-soft);
+  color: var(--fg-1);
+  vertical-align: top;
+}
+.set-models tbody tr:first-child td {
+  border-top: 0;
+}
+.set-models td.num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.set-model-name {
+  color: var(--fg-0);
+  font-weight: 500;
+}
+.set-model-desc {
+  margin-top: 1px;
+  color: var(--fg-2);
+  font-size: var(--fs-xs);
+}
 .set-inline > .set-v-note {
   margin-left: 4px;
 }

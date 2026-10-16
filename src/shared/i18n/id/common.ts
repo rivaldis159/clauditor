@@ -49,7 +49,6 @@ export const common: Record<string, string> = {
   'Keep the Agent SDK in sync with Claude': 'Selaraskan Agent SDK dengan Claude',
   "Claude's Agent SDK is fetched from npm on first use, and again whenever Claude desktop brings a newer Claude Code. Turn this off to keep the copy you have.":
     'Agent SDK milik Claude diambil dari npm saat pertama dipakai, dan lagi setiap kali Claude desktop membawa Claude Code yang lebih baru. Matikan untuk tetap memakai salinan yang ada.',
-  'Levels offered by Claude Code for the default model.': 'Tingkat yang disediakan Claude Code untuk model bawaan.',
   'The default model has no effort setting.': 'Model bawaan tidak memiliki pengaturan usaha.',
   'Could not check Claude': 'Gagal memeriksa Claude',
 

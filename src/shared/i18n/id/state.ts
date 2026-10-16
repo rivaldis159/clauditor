@@ -211,5 +211,10 @@ export const state: Record<string, string> = {
   '{n}m ago': '{n} mnt lalu',
   '{n}h ago': '{n} jam lalu',
   yesterday: 'kemarin',
-  '{n}d ago': '{n} hari lalu'
+  '{n}d ago': '{n} hari lalu',
+
+  // sessions: effort changes and copies continued in Clauditor
+  "Couldn't change effort": 'Gagal mengubah usaha',
+  'Copy in Clauditor': 'Salinan di Clauditor',
+  'Continued in Clauditor from a copy of another session. The original is left as it was.': 'Dilanjutkan di Clauditor dari salinan sesi lain. Sesi aslinya dibiarkan seperti semula.'
 }

@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import fuzzysort from 'fuzzysort'
-import { ArrowUp, ExternalLink, ImagePlus, KeyRound, Square, X } from 'lucide-react'
+import { ArrowUp, ExternalLink, ImagePlus, Info, KeyRound, Square, X } from 'lucide-react'
 import type { Effort, ModelOption, PermissionMode, PromptImage, RunnerInfo, SessionMeta } from '@shared/types'
 import { FileIcon } from '@/lib/fileIcons'
-import { tk, useT, type T } from '@/lib/i18n'
+import { tk, useT } from '@/lib/i18n'
 import { invoke } from '@/lib/ipc'
 import { focusComposer } from '@/lib/bus'
+import { defaultModel, desktopOwned } from '@/lib/claudeInfo'
 import * as P from '@/lib/paths'
 import { useApp } from '@/state/app'
-import { loginClaude, useSessions } from '@/state/sessions'
-import { effortsFor, modelFor, useClaude } from '@/state/claude'
+import { loginClaude, sessionTitle, useSessions } from '@/state/sessions'
+import { effortsFor, modelFor, useClaude, useClaudeDefaults } from '@/state/claude'
 import { newDesktopSession } from '@/commands'
+import { EffortPicker, ModelPicker } from './ModelPicker'
 
 /** Permission modes. `label` and `hint` are English source text: render them with t(). */
 export const MODES: { value: PermissionMode; label: string; hint: string }[] = [
@@ -20,25 +22,6 @@ export const MODES: { value: PermissionMode; label: string; hint: string }[] = [
   { value: 'auto', label: tk('Auto'), hint: tk('A classifier approves safe steps and asks when unsure') },
   { value: 'bypassPermissions', label: tk('Bypass permissions'), hint: tk('Every step runs without asking — use with care') }
 ]
-/** Names for the effort levels Claude Code reports today; a level added later shows its own name. */
-const EFFORT_LABELS: Record<string, string> = {
-  low: tk('Low effort'),
-  medium: tk('Medium effort'),
-  high: tk('High effort'),
-  xhigh: tk('Extra high effort'),
-  max: tk('Max effort')
-}
-
-/** "Default (recommended)" → "Default": the composer bar is narrow; the full label sits in the tooltip. */
-export function shortModelLabel(label: string): string {
-  return label.replace(/\s*\([^)]*\)\s*$/, '') || label
-}
-
-export function effortLabel(t: T, level: string): string {
-  if (!level) return t('Default effort')
-  const known = EFFORT_LABELS[level]
-  return known ? t(known) : t('{level} effort', { level: level.charAt(0).toUpperCase() + level.slice(1) })
-}
 
 let fileCache: { root: string; files: string[]; at: number } | null = null
 async function workspaceFiles(root: string): Promise<string[]> {
@@ -64,6 +47,43 @@ function readImage(file: File): Promise<PromptImage | null> {
 export type ComposerMode = 'new' | 'runner' | 'resume'
 
 const NO_MODELS: ModelOption[] = []
+
+/** A Claude desktop session opened in the panel: say what sending from here does, offer the alternative. */
+function DesktopSessionNote({ session, draft }: { session: SessionMeta; draft: string }) {
+  const t = useT()
+  const continueThere = async () => {
+    const text = draft.trim()
+    let copied = false
+    if (text) {
+      try {
+        await navigator.clipboard.writeText(text)
+        copied = true
+      } catch {
+        /* clipboard unavailable: open anyway */
+      }
+    }
+    const r = await invoke('desktop:openSession', session.id)
+    useApp.getState().toast(
+      r.ok
+        ? { level: 'info', title: t('Opened in Claude desktop'), detail: copied ? t('Your message is on the clipboard: paste it there with Ctrl+V.') : undefined }
+        : { level: 'error', title: t("Couldn't open Claude desktop") }
+    )
+  }
+  return (
+    <div className="composer-note" role="note">
+      <Info size={15} strokeWidth={1.9} className="composer-note-icon" />
+      <div>
+        <div className="composer-note-title">{t('This conversation belongs to Claude desktop')}</div>
+        <div className="composer-note-sub">{t("Claude desktop won't show replies you send from here, so Clauditor continues in a copy of it. The original stays as it is.")}</div>
+      </div>
+      <div className="composer-note-actions">
+        <button className="btn btn-sm" onClick={() => void continueThere()} data-tip={draft.trim() ? t('Opens the session in Claude desktop and copies your message') : undefined}>
+          <ExternalLink size={13} /> {t('Continue in Claude desktop')}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 function LoginBanner() {
   const t = useT()
@@ -113,11 +133,15 @@ export function Composer({ mode, session, runner }: { mode: ComposerMode; sessio
   const ta = useRef<HTMLTextAreaElement>(null)
   const running = runner?.state === 'running' || runner?.state === 'starting'
   const cwd = session?.cwd ?? workspace?.root ?? null
+  const defaults = useClaudeDefaults(cwd)
+  // sending into Claude desktop's own session continues in a copy (Claude desktop would never show the reply)
+  const copyOnSend = mode === 'resume' && !!session && desktopOwned(session)
 
   useEffect(() => {
     if (runner) {
       setPermMode(runner.permissionMode)
       if (runner.model) setModel(models.some((m) => m.value === runner.model) ? runner.model : model)
+      setEffort(runner.effort)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runner?.runId, runner?.permissionMode])
@@ -177,7 +201,17 @@ export function Composer({ mode, session, runner }: { mode: ComposerMode; sessio
       void s.send(runner.runId, prompt)
     } else if (mode === 'resume' && session) {
       if (!cwd) return
-      if (!(await s.startRun({ cwd, prompt, resumeSessionId: session.id, model: model || undefined, permissionMode: permMode, effort: efforts.includes(effort) ? effort : '' }))) return
+      const started = await s.startRun({
+        cwd,
+        prompt,
+        resumeSessionId: session.id,
+        fork: copyOnSend,
+        forkTitle: copyOnSend ? `${sessionTitle(session)} · Clauditor` : undefined,
+        model: model || undefined,
+        permissionMode: permMode,
+        effort: efforts.includes(effort) ? effort : ''
+      })
+      if (!started) return
     } else {
       if (!workspace) {
         useApp.getState().toast({ level: 'info', title: t('Open a project folder first'), detail: t('Claude will work in the folder you open.') })
@@ -196,7 +230,9 @@ export function Composer({ mode, session, runner }: { mode: ComposerMode; sessio
         ? t('Add guidance — Claude will read it after this step…')
         : t('Reply to Claude…')
       : mode === 'resume'
-        ? t('Continue this session in Clauditor…')
+        ? copyOnSend
+          ? t('Continue in a copy, here in Clauditor…')
+          : t('Continue this session in Clauditor…')
         : workspace
           ? t('What do you want to build in {name}?', { name: workspace.name })
           : t('Open a folder, then describe what you want to build…')
@@ -221,6 +257,7 @@ export function Composer({ mode, session, runner }: { mode: ComposerMode; sessio
       }}
     >
       {signedOut && mode !== 'runner' && <LoginBanner />}
+      {copyOnSend && session && <DesktopSessionNote session={session} draft={text} />}
       {images.length > 0 && (
         <div className="composer-images">
           {images.map((img, i) => (
@@ -301,21 +338,30 @@ export function Composer({ mode, session, runner }: { mode: ComposerMode; sessio
           </div>
         )}
         <div className="composer-bar">
-          <select
-            className="composer-select"
+          <ModelPicker
+            models={models}
             value={model}
-            data-tip={selected ? [selected.label, selected.description].filter(Boolean).join(' — ') : t('Model')}
-            onChange={(e) => {
-              setModel(e.target.value)
-              if (runner && runner.state !== 'stopped') void useSessions.getState().setModel(runner.runId, e.target.value)
+            defaults={defaults}
+            cwd={cwd}
+            live={!!runner && runner.state !== 'stopped'}
+            onChange={(v) => {
+              setModel(v)
+              if (runner && runner.state !== 'stopped') void useSessions.getState().setModel(runner.runId, v)
             }}
-          >
-            {(models.length ? models : [{ value: '', label: t('Default'), description: '' }]).map((m) => (
-              <option key={m.value || 'default'} value={m.value}>
-                {m.value ? shortModelLabel(m.label) : t('Default')}
-              </option>
-            ))}
-          </select>
+          />
+          {efforts.length > 0 && (
+            <EffortPicker
+              levels={efforts}
+              value={effort}
+              model={selected?.value ? selected : (defaultModel(models, defaults).value ?? selected)}
+              defaults={defaults}
+              live={!!runner && runner.state !== 'stopped'}
+              onChange={(v) => {
+                setEffort(v)
+                if (runner && runner.state !== 'stopped') void useSessions.getState().setEffort(runner.runId, v)
+              }}
+            />
+          )}
           <select
             className={`composer-select mode-${permMode}`}
             value={permMode}
@@ -332,15 +378,6 @@ export function Composer({ mode, session, runner }: { mode: ComposerMode; sessio
               </option>
             ))}
           </select>
-          {mode !== 'runner' && efforts.length > 0 && (
-            <select className="composer-select" value={efforts.includes(effort) ? effort : ''} onChange={(e) => setEffort(e.target.value as Effort | '')} data-tip={t('Thinking effort')}>
-              {['', ...efforts].map((level) => (
-                <option key={level || 'd'} value={level}>
-                  {effortLabel(t, level)}
-                </option>
-              ))}
-            </select>
-          )}
           <span className="grow" />
           <label className="icon-btn sm composer-attach" data-tip={t('Attach image')}>
             <ImagePlus size={15} strokeWidth={1.8} />

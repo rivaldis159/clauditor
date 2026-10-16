@@ -9,3 +9,4 @@ playwright-report/
 .DS_Store
 .clauditor-test/
 *.tsbuildinfo
+.demo/

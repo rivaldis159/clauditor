@@ -9,10 +9,12 @@ import type { GitService } from './services/git'
 import type { SessionIndex } from './services/claude/session-index'
 import type { LiveRegistry } from './services/claude/registry'
 import type { SessionStore } from './services/claude/session-store'
+import type { DesktopSessions } from './services/claude/desktop-sessions'
 import type { ClaudeRunner } from './services/claude/runner'
 import type { ClaudeEnvironmentService } from './services/claude/environment'
 import type { IdeBridge } from './services/ide-bridge'
 import { findClaudeExecutable } from './services/claude/locate'
+import { claudeDefaults } from './services/claude/defaults'
 import { TITLEBAR_HEIGHT } from './window'
 import { t } from './i18n'
 
@@ -25,6 +27,7 @@ export interface AppContext {
   git: GitService
   index: SessionIndex
   registry: LiveRegistry
+  desktop: DesktopSessions
   store: SessionStore
   runner: ClaudeRunner
   claude: ClaudeEnvironmentService
@@ -200,7 +203,8 @@ export function registerIpc(ctx: AppContext): void {
   /* sessions */
   const decorate = (m: import('@shared/types').SessionMeta) => {
     const live = ctx.registry.get(m.id)
-    return live ? { ...m, live, title: m.title ?? live.name } : m
+    const desktop = ctx.desktop.get(m.id)
+    return { ...m, live, desktop, title: m.title ?? desktop?.title ?? live?.name ?? null }
   }
   handle('sessions:list', () => ctx.index.groups(decorate))
   handle('sessions:live', () => ctx.registry.list())
@@ -224,7 +228,7 @@ export function registerIpc(ctx: AppContext): void {
 
   /* Claude desktop deep links */
   handle('desktop:openSession', async (sessionId) => {
-    const host = ctx.registry.get(sessionId)?.hostSessionId ?? s.getState().hostSessionIds[sessionId]
+    const host = ctx.desktop.get(sessionId)?.hostSessionId ?? ctx.registry.get(sessionId)?.hostSessionId ?? s.getState().hostSessionIds[sessionId]
     const url = host ? `claude://code/continue?session=${encodeURIComponent(host)}` : `claude://resume?session=${encodeURIComponent(sessionId)}`
     try {
       await shell.openExternal(url)
@@ -253,12 +257,14 @@ export function registerIpc(ctx: AppContext): void {
   handle('runner:respond', (id, req, decision) => ctx.runner.respond(id, req, decision))
   handle('runner:setMode', (id, mode) => ctx.runner.setMode(id, mode))
   handle('runner:setModel', (id, model) => ctx.runner.setModel(id, model))
+  handle('runner:setEffort', (id, effort) => ctx.runner.setEffort(id, effort))
   handle('runner:models', () => ctx.claude.models())
   handle('runner:pending', () => ctx.runner.pending())
   handle('runner:oneShot', (cwd, prompt) => ctx.runner.oneShot(cwd, prompt))
   handle('runner:authStatus', (force) => ctx.runner.authStatus(force))
   handle('claude:environment', () => ctx.claude.get())
   handle('claude:refresh', () => ctx.claude.refresh())
+  handle('claude:defaults', (cwd) => claudeDefaults(ctx.claudeHome, cwd))
 
   /* IDE bridge */
   handle('ide:status', () => ctx.bridge.status())

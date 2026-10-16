@@ -11,7 +11,10 @@ electronDist: node_modules/electron/dist
 # the UI speaks English and Indonesian; Chromium only needs these locale packs
 electronLanguages: [en-US, id]
 files:
-  - out/**
+  # only the app's build output (out/ may also hold local scratch such as recordings)
+  - out/main/**
+  - out/preload/**
+  - out/renderer/**
   - package.json
   - '!**/*.map'
   - '!node_modules/**/*.pdb'

@@ -303,6 +303,21 @@ export interface LiveSessionInfo {
   kind: string | null
   version: string | null
   startedAt: number | null
+  /** other live processes on the same session (e.g. Claude desktop and Clauditor at once) */
+  peers: { pid: number; entrypoint: string | null; status: string }[]
+}
+
+/** A session as Claude desktop lists it, read from Claude desktop's own session files. */
+export interface DesktopSessionRef {
+  /** Claude desktop's id for the session (local_…), used by claude:// links */
+  hostSessionId: string
+  title: string | null
+  /** model Claude desktop runs the session with, e.g. 'claude-opus-5-5' */
+  model: string | null
+  /** effort level picked in Claude desktop; null = Claude Code's default */
+  effort: string | null
+  permissionMode: string | null
+  archived: boolean
 }
 
 export interface SessionMeta {
@@ -320,6 +335,10 @@ export interface SessionMeta {
   version: string | null
   live: LiveSessionInfo | null
   startedByClauditor: boolean
+  /** set when Claude desktop lists this session: it belongs to Claude desktop */
+  desktop: DesktopSessionRef | null
+  /** the session this one was copied from (e.g. a Claude desktop session continued in Clauditor) */
+  forkedFrom: string | null
 }
 
 export interface ProjectGroup {
@@ -431,10 +450,13 @@ export interface SessionStats {
   cacheCreationTokens: number
   costUSD: number | null
   models: string[]
+  /** model of Claude's latest reply in the main conversation */
+  model: string | null
   linesAdded: number
   linesRemoved: number
   firstTs: number | null
   lastTs: number | null
+  /** tokens Claude read for its latest reply (input + cache): the conversation's size in the context window */
   contextTokens: number
 }
 
@@ -498,9 +520,26 @@ export interface RunnerStartOptions {
   permissionMode?: PermissionMode
   effort?: Effort | ''
   resumeSessionId?: string
+  /** continue in a copy of `resumeSessionId` (used for Claude desktop's sessions), titled `forkTitle` */
+  fork?: boolean
+  forkTitle?: string
 }
 
 export type RunnerState = 'starting' | 'running' | 'idle' | 'stopped' | 'error'
+
+/** How full the context window is, as Claude Code itself measures it (`/context`). */
+export interface ContextUsage {
+  model: string
+  used: number
+  limit: number
+  percent: number
+  /** Claude Code summarizes older messages once the conversation reaches this many tokens */
+  autoCompactAt: number | null
+  autoCompactEnabled: boolean
+  categories: { name: string; tokens: number; kind: 'used' | 'free' | 'buffer' | 'deferred' }[]
+  memoryFiles: { path: string; type: string; tokens: number }[]
+  measuredAt: number
+}
 
 export interface RunnerInfo {
   runId: string
@@ -515,7 +554,22 @@ export interface RunnerInfo {
   needsLogin: boolean
   startedAt: number
   lastResult: RunnerResultSummary | null
+  /** context window usage after Claude's latest reply (null until measured) */
+  context: ContextUsage | null
+  /** the session this run continues a copy of */
+  forkedFrom: string | null
 }
+
+/** What "Default" stands for in a folder: the model / effort Claude Code's own settings pick. */
+export interface ClaudeDefaults {
+  model: { value: string; source: ClaudeSettingSource } | null
+  /** effortLevel for every model */
+  effort: { value: string; source: ClaudeSettingSource } | null
+  /** modelSettings.<model>.effortLevel (what /effort saves), keyed by model name */
+  modelEfforts: Record<string, { value: string; source: ClaudeSettingSource }>
+}
+
+export type ClaudeSettingSource = 'env' | 'local' | 'project' | 'user'
 
 /** Result of `claude auth status`; loggedIn is null when the check itself could not run. */
 export interface ClaudeAuthStatus {
@@ -580,6 +634,10 @@ export interface ModelOption {
   effortLevels?: Effort[]
   supportsFastMode?: boolean
   supportsAutoMode?: boolean
+  /** context window in tokens, as Claude Code reports it for this model */
+  contextWindow?: number | null
+  /** conversation size (tokens) at which Claude Code auto-compacts; null when auto-compact is off */
+  autoCompactAt?: number | null
 }
 
 /* ---------------- Claude integration ---------------- */

@@ -131,11 +131,6 @@ export const pages: Record<string, string> = {
   'Default permission mode': 'Mode izin bawaan',
   'Default effort level': 'Tingkat usaha bawaan',
   'Model default': 'Bawaan model',
-  Low: 'Rendah',
-  Medium: 'Sedang',
-  High: 'Tinggi',
-  'Extra high': 'Sangat tinggi',
-  Max: 'Maksimal',
   'Follow running sessions': 'Ikuti sesi yang sedang berjalan',
   'Follow mode turns on when you open a live session.': 'Mode ikuti aktif saat membuka sesi live.',
   'Open files Claude edits': 'Buka berkas yang diedit Claude',
@@ -192,9 +187,6 @@ export const pages: Record<string, string> = {
   'Token usage': 'Pemakaian token',
   Input: 'Masukan',
   Output: 'Keluaran',
-  'Cache read': 'Cache dibaca',
-  'Cache write': 'Cache ditulis',
-  'Latest context size': 'Konteks terakhir',
   'Estimated cost': 'Perkiraan biaya',
   'Show as table': 'Tampilkan sebagai tabel',
   Time: 'Waktu',
@@ -231,5 +223,20 @@ export const pages: Record<string, string> = {
   Edit: 'Edit',
   'The file content before this step was not fully recorded, so the view may differ slightly from the original.':
     'Isi berkas sebelum langkah ini tidak terekam utuh; tampilan bisa sedikit berbeda dari aslinya.',
-  approximate: 'perkiraan'
+  approximate: 'perkiraan',
+
+  // overview: model and context card
+  'Model and context': 'Model dan konteks',
+  'Context in use': 'Konteks terpakai',
+  '{used} tokens ({pct}%)': '{used} token ({pct}%)',
+  'Auto-compacts at': 'Ringkas otomatis pada',
+
+  // settings: models table and default hints
+  'Effort levels': 'Tingkat usaha',
+  'Claude Code decides: {model}, set in {source}.': 'Claude Code yang menentukan: {model}, diatur di {source}.',
+  'Claude Code decides: {model}, its recommendation.': 'Claude Code yang menentukan: {model}, rekomendasinya.',
+  'What Claude Code offers right now, read from Claude Code itself. The context window is how much of a conversation the model can keep in mind.':
+    'Yang ditawarkan Claude Code saat ini, dibaca langsung dari Claude Code. Jendela konteks adalah seberapa banyak percakapan yang bisa diingat model.',
+  "How long Claude thinks before answering. Model default: the model's own level, or the one you saved with /effort in Claude Code.":
+    'Seberapa lama Claude berpikir sebelum menjawab. Bawaan model: tingkat bawaan model, atau yang Anda simpan dengan /effort di Claude Code.'
 }

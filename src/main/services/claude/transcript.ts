@@ -32,6 +32,8 @@ export interface ParserMeta {
   entrypoint: string | null
   createdAt: number | null
   lastTs: number | null
+  /** source session of a copy made with Claude Code's fork (records carry `forkedFrom`) */
+  forkedFrom: string | null
 }
 
 export interface Drained {
@@ -50,6 +52,7 @@ export function emptyStats(): SessionStats {
     cacheCreationTokens: 0,
     costUSD: null,
     models: [],
+    model: null,
     linesAdded: 0,
     linesRemoved: 0,
     firstTs: null,
@@ -164,7 +167,8 @@ export class TranscriptParser {
     version: null,
     entrypoint: null,
     createdAt: null,
-    lastTs: null
+    lastTs: null,
+    forkedFrom: null
   }
   readonly stats: SessionStats = emptyStats()
   todos: TodoItem[] | null = null
@@ -217,6 +221,7 @@ export class TranscriptParser {
     if (typeof rec.version === 'string') this.meta.version = rec.version
     if (typeof rec.gitBranch === 'string' && rec.gitBranch) this.meta.gitBranch = rec.gitBranch
     if (typeof rec.entrypoint === 'string' && !this.meta.entrypoint) this.meta.entrypoint = rec.entrypoint
+    if (!this.meta.forkedFrom && typeof rec.forkedFrom?.sessionId === 'string') this.meta.forkedFrom = rec.forkedFrom.sessionId
     const when = Number.isFinite(ts) ? ts : (this.meta.lastTs ?? 0)
 
     switch (rec.type) {
@@ -443,6 +448,7 @@ export class TranscriptParser {
       this.models.add(model)
       this.stats.models = [...this.models]
     }
+    if (model) this.stats.model = model
     if (msg.usage) this.addUsage(mid, msg.usage)
     const content = Array.isArray(msg.content) ? msg.content : []
     content.forEach((b: Rec, i: number) => {

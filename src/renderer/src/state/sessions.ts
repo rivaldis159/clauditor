@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type {
   ClaudeAuthStatus,
+  Effort,
   LiveSessionInfo,
   PermissionDecision,
   PermissionMode,
@@ -67,6 +68,7 @@ interface SessionsStore {
   respond(req: PermissionRequest, decision: PermissionDecision): Promise<void>
   setMode(runId: string, mode: PermissionMode): Promise<void>
   setModel(runId: string, model: string): Promise<void>
+  setEffort(runId: string, effort: Effort | ''): Promise<void>
   onRunnerState(info: RunnerInfo): void
   onStream(u: RunnerStreamUpdate): void
   addPermission(r: PermissionRequest): void
@@ -150,9 +152,10 @@ export const useSessions = create<SessionsStore>((set, get) => ({
     // keep open sessions' live info fresh
     const data = { ...get().data }
     let changed = false
+    const key = (l: LiveSessionInfo | null) => (l ? `${l.status}|${l.pid}|${(l.peers ?? []).map((p) => `${p.pid}:${p.status}`).join(',')}` : '')
     for (const [id, d] of Object.entries(data)) {
       const live = list.find((l) => l.sessionId === id) ?? null
-      if ((live?.status ?? null) !== (d.meta.live?.status ?? null) || !!live !== !!d.meta.live) {
+      if (key(live) !== key(d.meta.live)) {
         data[id] = { ...d, meta: { ...d.meta, live }, rev: d.rev + 1 }
         changed = true
       }
@@ -282,6 +285,8 @@ export const useSessions = create<SessionsStore>((set, get) => ({
         cwd: opts.cwd,
         prompt: opts.prompt,
         resumeSessionId: opts.resumeSessionId,
+        fork: opts.fork,
+        forkTitle: opts.forkTitle,
         model: opts.model ?? (s.defaultModel || undefined),
         permissionMode: opts.permissionMode ?? s.defaultPermissionMode,
         effort: opts.effort ?? s.defaultEffort
@@ -331,6 +336,14 @@ export const useSessions = create<SessionsStore>((set, get) => ({
       await invoke('runner:setModel', runId, model)
     } catch (err) {
       useApp.getState().toast({ level: 'error', title: t("Couldn't change model"), detail: errorText(err) })
+    }
+  },
+
+  async setEffort(runId, effort) {
+    try {
+      await invoke('runner:setEffort', runId, effort)
+    } catch (err) {
+      useApp.getState().toast({ level: 'error', title: t("Couldn't change effort"), detail: errorText(err) })
     }
   },
 
@@ -420,6 +433,13 @@ export function sessionTitle(meta: Pick<SessionMeta, 'title' | 'firstPrompt' | '
     return first
   }
   return t('Session {id}', { id: meta.id.slice(0, 8) })
+}
+
+/** Where a session comes from, for the header: Claude desktop, a copy continued in Clauditor, the CLI… */
+export function originFor(meta: Pick<SessionMeta, 'entrypoint' | 'desktop' | 'forkedFrom'>): { label: string; tip: string | null } {
+  if (meta.desktop) return { label: 'Claude desktop', tip: null }
+  if (meta.forkedFrom) return { label: t('Copy in Clauditor'), tip: t('Continued in Clauditor from a copy of another session. The original is left as it was.') }
+  return { label: originLabel(meta.entrypoint), tip: null }
 }
 
 export function originLabel(entrypoint: string | null | undefined): string {

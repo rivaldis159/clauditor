@@ -11,6 +11,7 @@ import { GitService } from './services/git'
 import { SessionIndex } from './services/claude/session-index'
 import { LiveRegistry } from './services/claude/registry'
 import { SessionStore } from './services/claude/session-store'
+import { DesktopSessions } from './services/claude/desktop-sessions'
 import { ClaudeRunner } from './services/claude/runner'
 import { SdkManager } from './services/claude/sdk'
 import { ClaudeEnvironmentService } from './services/claude/environment'
@@ -101,9 +102,10 @@ if (!app.requestSingleInstanceLock()) {
     const bridge = new IdeBridge(home, app.getVersion())
     const index = new SessionIndex(home)
     const registry = new LiveRegistry(home)
+    const desktop = new DesktopSessions()
     const exePath = () => claudeExecutable(ctx)?.path ?? null
     const sdk = new SdkManager(app.getPath('userData'))
-    const runner = new ClaudeRunner(exePath, () => ({}), () => sdk.load())
+    const runner = new ClaudeRunner(exePath, () => ({}), () => sdk.load(), home)
     const claude = new ClaudeEnvironmentService({
       userData: app.getPath('userData'),
       sdk,
@@ -127,7 +129,8 @@ if (!app.requestSingleInstanceLock()) {
       git: new GitService(),
       index,
       registry,
-      store: new SessionStore(home, index, registry),
+      desktop,
+      store: new SessionStore(home, index, registry, desktop),
       runner,
       claude,
       bridge,

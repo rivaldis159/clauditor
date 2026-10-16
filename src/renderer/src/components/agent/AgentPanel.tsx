@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { ExternalLink, LoaderCircle, Radio, Sparkles, SquareTerminal } from 'lucide-react'
+import { ExternalLink, LoaderCircle, Radio, Sparkles, SquareTerminal, TriangleAlert } from 'lucide-react'
+import type { RunnerInfo } from '@shared/types'
 import { Logo } from '@/components/common/Logo'
 import { ago } from '@/lib/format'
 import { useT } from '@/lib/i18n'
@@ -86,17 +87,41 @@ function StartScreen() {
   )
 }
 
-function DesktopLiveBar({ sessionId, busy }: { sessionId: string; busy: boolean }) {
+const SDK_ENTRYPOINTS = new Set(['sdk-ts', 'sdk-py'])
+
+function DesktopLiveBar({ sessionId, busy, entrypoint }: { sessionId: string; busy: boolean; entrypoint: string | null }) {
   const t = useT()
+  const terminal = entrypoint === 'cli'
   return (
     <div className="desktop-bar">
       <span className={`dot ${busy ? 'live' : 'idle'}`} />
       <div className="grow">
-        <div className="desktop-bar-title">{t('This session is running in Claude desktop')}</div>
-        <div className="desktop-bar-sub">{t('Clauditor is following it live. Reply or grant permissions in Claude desktop.')}</div>
+        <div className="desktop-bar-title">{terminal ? t('This session is running in a terminal') : t('This session is running in Claude desktop')}</div>
+        <div className="desktop-bar-sub">
+          {terminal ? t('Clauditor is following it live. Reply or grant permissions in the terminal where Claude Code runs.') : t('Clauditor is following it live. Reply or grant permissions in Claude desktop.')}
+        </div>
       </div>
-      <button className="btn btn-sm" onClick={() => void invoke('desktop:openSession', sessionId)}>
-        <ExternalLink size={13} /> {t('Open')}
+      {!terminal && (
+        <button className="btn btn-sm" onClick={() => void invoke('desktop:openSession', sessionId)}>
+          <ExternalLink size={13} /> {t('Open')}
+        </button>
+      )}
+    </div>
+  )
+}
+
+/** Clauditor runs the session while Claude desktop or a terminal also has it open. */
+function DoubleOpenBar({ runner, where }: { runner: RunnerInfo; where: 'desktop' | 'terminal' }) {
+  const t = useT()
+  return (
+    <div className="double-bar" role="alert">
+      <TriangleAlert size={15} strokeWidth={1.9} className="double-bar-icon" />
+      <div className="grow">
+        <div className="double-bar-title">{where === 'desktop' ? t('Also open in Claude desktop') : t('Also open in a terminal')}</div>
+        <div className="double-bar-sub">{t('Each app only sees its own messages, so the conversation would split in two. Continue in one place.')}</div>
+      </div>
+      <button className="btn btn-sm" onClick={() => void useSessions.getState().stop(runner.runId)} data-tip={t('End this session in Clauditor and leave it to the other app')}>
+        {t('Stop in Clauditor')}
       </button>
     </div>
   )
@@ -132,10 +157,13 @@ export function AgentPanel() {
   const activeRunner = runner && runner.state !== 'stopped' && runner.state !== 'error' ? runner : null
   const stream = activeRunner ? (streams[activeRunner.runId] ?? null) : null
   const live = data.meta.live
-  const desktopOwned = !!live && !activeRunner
+  const liveElsewhere = !!live && !activeRunner
   const busy = live?.status === 'busy' || activeRunner?.state === 'running' || activeRunner?.state === 'starting'
   const busySince = busy ? (live?.statusUpdatedAt ?? null) : null
   const myPermissions = activeRunner ? permissions.filter((p) => p.runId === activeRunner.runId) : []
+  // processes other than Clauditor's own (SDK) on the session Clauditor is running
+  const others = activeRunner && live ? [live, ...(live.peers ?? [])].filter((p) => !SDK_ENTRYPOINTS.has(p.entrypoint ?? '')) : []
+  const doubleOpen = others.length ? (others.some((p) => p.entrypoint === 'claude-desktop') ? 'desktop' : 'terminal') : null
 
   return (
     <div className="agent-panel">
@@ -144,7 +172,7 @@ export function AgentPanel() {
         stats={data.stats}
         filesChanged={data.files.length}
         busy={!!busy}
-        runnerState={activeRunner?.state ?? null}
+        runner={activeRunner}
         filter={filter}
         setFilter={setFilter}
       />
@@ -167,8 +195,9 @@ export function AgentPanel() {
           ))}
         </div>
       )}
-      {desktopOwned ? (
-        <DesktopLiveBar sessionId={activeId} busy={!!busy} />
+      {doubleOpen && activeRunner && <DoubleOpenBar runner={activeRunner} where={doubleOpen} />}
+      {liveElsewhere ? (
+        <DesktopLiveBar sessionId={activeId} busy={!!busy} entrypoint={live?.entrypoint ?? null} />
       ) : (
         <Composer mode={activeRunner ? 'runner' : 'resume'} session={data.meta} runner={activeRunner} />
       )}

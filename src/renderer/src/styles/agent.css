@@ -95,6 +95,143 @@ svg.accent {
   font-size: 10.5px;
 }
 
+/* model · effort · context strip (opens the session info card) */
+.agent-head {
+  container: agenthead / inline-size;
+}
+.model-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% - 12px);
+  min-width: 0;
+  height: 26px;
+  margin: 8px 0 0 12px;
+  padding: 0 7px 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-2);
+  color: var(--fg-1);
+  font-size: 11.5px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease);
+}
+.model-strip:hover,
+.model-strip.open {
+  border-color: var(--line-strong);
+  background: var(--bg-3);
+}
+.model-strip:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.ms-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  white-space: nowrap;
+}
+.ms-model {
+  flex: none;
+  color: var(--fg-0);
+  font-weight: 500;
+}
+.ms-model svg {
+  flex: none;
+  color: var(--accent);
+}
+.ms-effort {
+  flex: 0 1 auto;
+}
+.ms-effort-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ms-context {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+.ms-meter {
+  flex: none;
+  width: 40px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--bg-5);
+  overflow: hidden;
+}
+.ms-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--ok);
+}
+.ms-context.tone-warn .ms-meter > span {
+  background: var(--warn);
+}
+.ms-context.tone-bad .ms-meter > span {
+  background: var(--bad);
+}
+.ms-context.tone-bad {
+  color: var(--bad);
+}
+.ms-context-of {
+  color: var(--fg-3);
+}
+.ms-chev {
+  flex: none;
+  color: var(--fg-3);
+}
+/* narrower panels drop the secondary details first (the card has them all) */
+@container agenthead (max-width: 479px) {
+  .ms-context-of {
+    display: none;
+  }
+}
+@container agenthead (max-width: 379px) {
+  .ms-effort-name {
+    display: none;
+  }
+}
+
+/* effort gauge: five rising bars */
+.effort-bars {
+  display: inline-flex;
+  flex: none;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 10px;
+}
+.effort-bars i {
+  width: 2.5px;
+  border-radius: 1px;
+  background: var(--fg-3);
+  opacity: 0.4;
+}
+.effort-bars i:nth-child(1) {
+  height: 3px;
+}
+.effort-bars i:nth-child(2) {
+  height: 4.75px;
+}
+.effort-bars i:nth-child(3) {
+  height: 6.5px;
+}
+.effort-bars i:nth-child(4) {
+  height: 8.25px;
+}
+.effort-bars i:nth-child(5) {
+  height: 10px;
+}
+.effort-bars i.on {
+  background: var(--accent);
+  opacity: 1;
+}
+
 /* ------------------------------------------------------------------ pulse strip */
 .pulse {
   position: relative;
@@ -1295,6 +1432,88 @@ button.thinking-head:hover {
 .composer-attach {
   cursor: pointer;
 }
+/* model / effort pickers (popover buttons) */
+.composer-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 170px;
+  height: 24px;
+  padding: 0 6px 0 7px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg-2);
+  font-size: 11.5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.composer-pick:hover,
+.composer-pick.open {
+  background: var(--bg-3);
+  color: var(--fg-0);
+}
+.composer-pick:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.composer-pick > svg {
+  flex: none;
+}
+.composer-pick-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.composer {
+  container: composer / inline-size;
+}
+@container composer (max-width: 409px) {
+  .composer-pick-prefix,
+  .composer-pick.effort .composer-pick-label {
+    display: none;
+  }
+}
+/* the narrowest panel: images can still be pasted or dropped in */
+@container composer (max-width: 339px) {
+  .composer-pick > svg:first-child,
+  .composer-attach {
+    display: none;
+  }
+}
+/* a Claude desktop session in the panel: sending continues in a copy */
+.composer-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 10px;
+  margin-bottom: 8px;
+  padding: 10px 10px 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--info) 30%, transparent);
+  border-radius: var(--radius-lg);
+  background: var(--info-soft);
+}
+.composer-note-icon {
+  margin-top: 1px;
+  color: var(--info);
+}
+.composer-note-title {
+  color: var(--fg-0);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: 1.35;
+}
+.composer-note-sub {
+  margin-top: 2px;
+  color: var(--fg-1);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+.composer-note-actions {
+  grid-column: 2;
+  display: flex;
+  justify-content: flex-end;
+}
 .send-btn {
   display: grid;
   place-items: center;
@@ -1386,6 +1605,35 @@ button.thinking-head:hover {
 }
 .desktop-bar-sub {
   color: var(--fg-2);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+/* the session Clauditor runs is open in another app too */
+.double-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  margin: 8px 10px 0;
+  padding: 10px 10px 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--warn) 34%, transparent);
+  border-radius: var(--radius-lg);
+  background: var(--warn-soft);
+}
+.double-bar-icon {
+  flex: none;
+  align-self: flex-start;
+  margin-top: 1px;
+  color: var(--warn);
+}
+.double-bar-title {
+  color: var(--fg-0);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.double-bar-sub {
+  color: var(--fg-1);
   font-size: 11.5px;
   line-height: 1.4;
 }

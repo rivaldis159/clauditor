@@ -16,6 +16,7 @@ interface HeadInfo {
   version: string | null
   gitBranch: string | null
   title: string | null
+  forkedFrom: string | null
 }
 
 interface CacheEntry {
@@ -62,7 +63,7 @@ function promptFrom(rec: any): string | null {
 }
 
 function parseHead(text: string, complete: boolean): HeadInfo {
-  const info: HeadInfo = { cwd: null, createdAt: null, firstPrompt: null, entrypoint: null, version: null, gitBranch: null, title: null }
+  const info: HeadInfo = { cwd: null, createdAt: null, firstPrompt: null, entrypoint: null, version: null, gitBranch: null, title: null, forkedFrom: null }
   const lines = text.split('\n')
   if (!complete) lines.pop()
   for (const line of lines) {
@@ -83,6 +84,7 @@ function parseHead(text: string, complete: boolean): HeadInfo {
     if (!info.entrypoint && typeof rec.entrypoint === 'string') info.entrypoint = rec.entrypoint
     if (!info.version && typeof rec.version === 'string') info.version = rec.version
     if (!info.gitBranch && typeof rec.gitBranch === 'string' && rec.gitBranch) info.gitBranch = rec.gitBranch
+    if (!info.forkedFrom && typeof rec.forkedFrom?.sessionId === 'string') info.forkedFrom = rec.forkedFrom.sessionId
     if (rec.type === 'custom-title' && rec.customTitle) info.title = rec.customTitle
     if (!info.firstPrompt) info.firstPrompt = promptFrom(rec)
     if (info.cwd && info.createdAt && info.firstPrompt && info.entrypoint) break
@@ -203,7 +205,9 @@ export class SessionIndex extends EventEmitter {
       gitBranch: branch ?? head.gitBranch,
       version: head.version,
       live: null,
-      startedByClauditor: false
+      startedByClauditor: false,
+      desktop: null,
+      forkedFrom: head.forkedFrom
     }
     this.cache.set(file, { size: st.size, mtimeMs: st.mtimeMs, head, meta })
     this.fileById.set(id, file)

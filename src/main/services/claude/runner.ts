@@ -5,8 +5,11 @@
 import { randomUUID } from 'node:crypto'
 import { execFile } from 'node:child_process'
 import { EventEmitter } from 'node:events'
+import os from 'node:os'
+import path from 'node:path'
 import type {
   ClaudeAuthStatus,
+  ContextUsage,
   Effort,
   PermissionDecision,
   PermissionMode,
@@ -112,6 +115,39 @@ function describeSuggestion(s: PermissionUpdate): string {
 
 const AUTH_ERROR = /failed to authenticate|authentication[_ ]error|oauth (session|token)|not logged in|invalid (api key|x-api-key|bearer)|run \/login|\b401\b|unauthori[sz]ed/i
 
+type RawContextUsage = {
+  model?: string
+  totalTokens?: number
+  maxTokens?: number
+  rawMaxTokens?: number
+  percentage?: number
+  autoCompactThreshold?: number
+  isAutoCompactEnabled?: boolean
+  categories?: { name?: string; tokens?: number; kind?: string }[]
+  memoryFiles?: { path?: string; type?: string; tokens?: number }[]
+}
+
+/** Claude Code's /context numbers in the shape the UI shows. */
+export function toContextUsage(u: RawContextUsage, at = Date.now()): ContextUsage | null {
+  const limit = Number(u.rawMaxTokens || u.maxTokens) || 0
+  const used = Number(u.totalTokens) || 0
+  if (!limit) return null
+  const kinds = new Set(['used', 'free', 'buffer', 'deferred'])
+  return {
+    model: String(u.model ?? ''),
+    used,
+    limit,
+    percent: typeof u.percentage === 'number' ? u.percentage : Math.round((used / limit) * 100),
+    autoCompactAt: u.isAutoCompactEnabled && u.autoCompactThreshold ? u.autoCompactThreshold : null,
+    autoCompactEnabled: !!u.isAutoCompactEnabled,
+    categories: (u.categories ?? [])
+      .filter((c) => (c.tokens ?? 0) > 0 && kinds.has(String(c.kind)))
+      .map((c) => ({ name: String(c.name ?? ''), tokens: Number(c.tokens) || 0, kind: c.kind as ContextUsage['categories'][number]['kind'] })),
+    memoryFiles: (u.memoryFiles ?? []).filter((f) => f.path).map((f) => ({ path: String(f.path), type: String(f.type ?? ''), tokens: Number(f.tokens) || 0 })),
+    measuredAt: at
+  }
+}
+
 export function loginHint(): string {
   return t('Claude Code in Clauditor is not signed in, or its login has expired. Click "Sign in" to log in once in a terminal. Sessions from Claude desktop can still be followed without signing in.')
 }
@@ -141,9 +177,35 @@ export class ClaudeRunner extends EventEmitter {
     private readonly executable: () => string | null,
     private readonly extraEnv: () => Record<string, string>,
     /** the Agent SDK in use: bundled, or synced to Claude desktop's Claude Code version */
-    private readonly loadSdk: () => Promise<Sdk>
+    private readonly loadSdk: () => Promise<Sdk>,
+    /** the Claude data folder Clauditor reads (~/.claude unless overridden) */
+    private readonly claudeHome: string = path.join(os.homedir(), '.claude')
   ) {
     super()
+  }
+
+  /**
+   * Copies a session into a new one (fresh ids, records marked `forkedFrom`) so Clauditor can
+   * continue it without writing into a transcript another app owns. Pure file work, no model call.
+   */
+  private async fork(sdk: Sdk, sessionId: string, cwd: string, title: string | undefined): Promise<string> {
+    // the SDK reads CLAUDE_CONFIG_DIR at call time; point it at the folder Clauditor reads
+    const before = process.env.CLAUDE_CONFIG_DIR
+    const swap = path.resolve(before ?? path.join(os.homedir(), '.claude')) !== path.resolve(this.claudeHome)
+    if (swap) process.env.CLAUDE_CONFIG_DIR = this.claudeHome
+    try {
+      try {
+        return (await sdk.forkSession(sessionId, { dir: cwd, title })).sessionId
+      } catch {
+        // the transcript may sit under another project folder name: search them all
+        return (await sdk.forkSession(sessionId, { title })).sessionId
+      }
+    } finally {
+      if (swap) {
+        if (before === undefined) delete process.env.CLAUDE_CONFIG_DIR
+        else process.env.CLAUDE_CONFIG_DIR = before
+      }
+    }
   }
 
   /** True while any run is alive; the SDK is only swapped between runs. */
@@ -213,10 +275,17 @@ export class ClaudeRunner extends EventEmitter {
     const sdk = await this.loadSdk()
     const runId = randomUUID()
     const mode: PermissionMode = opts.permissionMode ?? 'default'
+    let resume = opts.resumeSessionId || undefined
+    let forkOnStart = false
+    if (resume && opts.fork) {
+      // a copy keeps the source transcript (e.g. Claude desktop's) untouched
+      if (typeof sdk.forkSession === 'function') resume = await this.fork(sdk, resume, opts.cwd, opts.forkTitle)
+      else forkOnStart = true // older SDK: the CLI makes the copy when the run starts
+    }
     const run: Run = {
       info: {
         runId,
-        sessionId: opts.resumeSessionId ?? null,
+        sessionId: forkOnStart ? null : (resume ?? null),
         cwd: opts.cwd,
         state: 'starting',
         model: opts.model || null,
@@ -225,7 +294,9 @@ export class ClaudeRunner extends EventEmitter {
         error: null,
         needsLogin: false,
         startedAt: Date.now(),
-        lastResult: null
+        lastResult: null,
+        context: null,
+        forkedFrom: opts.fork && opts.resumeSessionId ? opts.resumeSessionId : null
       },
       queue: new AsyncQueue<SDKUserMessage>(),
       query: null,
@@ -248,7 +319,8 @@ export class ClaudeRunner extends EventEmitter {
         permissionMode: mode,
         allowDangerouslySkipPermissions: mode === 'bypassPermissions',
         effort: (opts.effort || undefined) as never,
-        resume: opts.resumeSessionId || undefined,
+        resume,
+        forkSession: forkOnStart || undefined,
         includePartialMessages: true,
         settingSources: ['user', 'project', 'local'],
         systemPrompt: { type: 'preset', preset: 'claude_code' },
@@ -412,6 +484,7 @@ export class ClaudeRunner extends EventEmitter {
         }
         this.emitState(run)
         this.emit('result', { ...run.info })
+        void this.measureContext(run)
         break
       default:
         break
@@ -526,6 +599,32 @@ export class ClaudeRunner extends EventEmitter {
     await run.query.setModel(model || undefined)
     run.info.model = model || null
     this.emitState(run)
+    // a different model can mean a different context window
+    if (run.info.state === 'idle') void this.measureContext(run)
+  }
+
+  /** Changes the effort for the next turns ('' = back to Claude Code's default for the model). */
+  async setEffort(runId: string, effort: Effort | ''): Promise<void> {
+    const run = this.runs.get(runId)
+    if (!run?.query) return
+    if (typeof run.query.applyFlagSettings !== 'function') throw new Error(t('This version of Claude Code cannot change the effort during a session.'))
+    await run.query.applyFlagSettings({ effortLevel: (effort || null) as never })
+    run.info.effort = effort
+    this.emitState(run)
+  }
+
+  /** Claude Code's own context measurement (local estimate, no model call), after a turn. */
+  private async measureContext(run: Run): Promise<void> {
+    const q = run.query as (Query & { getContextUsage?: (o?: { detail?: 'summary' | 'full' }) => Promise<RawContextUsage> }) | null
+    if (!q || typeof q.getContextUsage !== 'function') return
+    try {
+      const usage = toContextUsage(await q.getContextUsage({ detail: 'summary' }))
+      if (!usage || !this.runs.has(run.info.runId)) return
+      run.info.context = usage
+      this.emitState(run)
+    } catch {
+      /* the CLI predates /context data, or the run ended meanwhile */
+    }
   }
 
   /** Single-turn, tool-less request (e.g. commit message drafting). */
